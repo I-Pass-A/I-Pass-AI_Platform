@@ -3,13 +3,15 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
-import { GraduationCap, Mail, Lock, User as UserIcon, BookOpen } from "lucide-react";
+import { GraduationCap, Mail, Lock, User as UserIcon, BookOpen, ChevronRight, Globe, Award } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 
 export default function Home() {
   const { user, loading } = useAuth();
   const router = useRouter();
+  const [viewState, setViewState] = useState<"hero" | "auth">("hero");
   const [isLogin, setIsLogin] = useState(true);
+  const [lang, setLang] = useState<"EN" | "AO">("EN");
   
   // Form fields
   const [name, setName] = useState("");
@@ -22,7 +24,6 @@ export default function Home() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    // If user is already logged in, redirect to Tutor page
     if (!loading && user) {
       router.push("/tutor");
     }
@@ -46,7 +47,9 @@ export default function Home() {
           borderRadius: "50%",
           animation: "spin 1s linear infinite"
         }}></div>
-        <p style={{ color: "var(--text-secondary)", fontFamily: "var(--font-outfit)" }}>Loading I-Pass-A...</p>
+        <p style={{ color: "var(--text-secondary)", fontFamily: "var(--font-outfit)" }}>
+          {lang === "EN" ? "Loading I-Pass-A..." : "I-Pass-A loading jira..."}
+        </p>
         <style jsx>{`
           @keyframes spin {
             to { transform: rotate(360deg); }
@@ -63,14 +66,12 @@ export default function Home() {
 
     try {
       if (isLogin) {
-        // Sign in via Supabase Auth
         const { error: loginErr } = await supabase.auth.signInWithPassword({
           email,
           password
         });
         if (loginErr) throw loginErr;
       } else {
-        // Sign up via Supabase Auth with metadata
         const { error: signUpErr } = await supabase.auth.signUp({
           email,
           password,
@@ -86,7 +87,11 @@ export default function Home() {
         if (signUpErr) throw signUpErr;
         
         setIsLogin(true);
-        setError("Account created successfully! Please sign in using your credentials.");
+        setError(
+          lang === "EN" 
+            ? "Account created successfully! Please sign in using your credentials." 
+            : "Herri kee milkiin uumameera! Maaloo odeeffannoo keen seeni."
+        );
         setName("");
         setPassword("");
         setSubmitting(false);
@@ -95,227 +100,360 @@ export default function Home() {
       
       router.push("/tutor");
     } catch (err: any) {
-      setError(err.message || "Authentication failed. Make sure your email and password are correct.");
+      setError(
+        err.message || 
+        (lang === "EN" ? "Authentication failed." : "Seensa eeyyamuun hin danda'amne.")
+      );
     } finally {
       setSubmitting(false);
     }
+  };
+
+  // UI translations
+  const t = {
+    title: "I-Pass-A",
+    subtitle: lang === "EN" 
+      ? "AI-Powered Tutoring & Smart Exam Preparation" 
+      : "Barumsa AI fi Qophii Qormaataa Saffisaa",
+    desc: lang === "EN"
+      ? "Empowering students from Grades 1–12 with personalized AI learning. Study in English (Grades 9–12) or Afaan Oromo (Grades 1–8) with curriculum-grounded tutoring and practice exams."
+      : "Barattoota Kutaa 1-12 barumsa AI dhuunfaatiin gahoomsuu. Barnoota kee Ingiliffaan (Kutaa 9-12) ykn Afaan Oromootiin (Kutaa 1-8) qorannoo qormaataa fi tutor-gochaan baradhu.",
+    discover: lang === "EN" ? "Discover the Platform" : "Platformii Argadhu",
+    statStudents: lang === "EN" ? "12,500+ Active Students" : "Barattoota 12,500+ Ol",
+    statExams: lang === "EN" ? "85,000+ Generated Exams" : "Qormaata 85,000+ Ol",
+    statSchools: lang === "EN" ? "45+ Connected Schools" : "Manneen Barumsaa 45+",
+    welcomeBack: lang === "EN" ? "Welcome Back" : "Akkam Jirtu",
+    welcomeSub: lang === "EN" ? "Sign in to access your AI Tutor" : "Barnoota kee itti fufuuf seeni",
+    createAcc: lang === "EN" ? "Create Account" : "Hera Uumi",
+    createSub: lang === "EN" ? "Sign up to begin your learning journey" : "Barumsa kee eegaluuf galmaa'i",
+    nameLabel: lang === "EN" ? "Full Name" : "Maqaa Guutuu",
+    emailLabel: lang === "EN" ? "Email Address" : "Email Keessan",
+    passLabel: lang === "EN" ? "Password" : "Jecha Iccitii",
+    roleLabel: lang === "EN" ? "I am a..." : "Ani...",
+    roleStudent: lang === "EN" ? "Student" : "Barataa",
+    roleTeacher: lang === "EN" ? "Teacher" : "Barsiisaa",
+    roleAdmin: lang === "EN" ? "Content Administrator" : "Bulchaa Curriculum",
+    gradeLabel: lang === "EN" ? "Select Grade" : "Kutaa Filadhu",
+    signInBtn: lang === "EN" ? "Sign In" : "Seeni",
+    signUpBtn: lang === "EN" ? "Sign Up" : "Galmaa'i",
+    haveAccount: lang === "EN" ? "Already have an account?" : "Hera qabduu?",
+    noAccount: lang === "EN" ? "Don't have an account?" : "Hera hin qabduu?",
+    backBtn: lang === "EN" ? "Back" : "Gara Dubaatti"
   };
 
   return (
     <main style={{
       minHeight: "100vh",
       display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
+      flexDirection: "column",
       padding: "2rem",
-      background: "radial-gradient(circle at 10% 20%, rgba(14, 165, 233, 0.05) 0%, transparent 40%), radial-gradient(circle at 90% 80%, rgba(20, 184, 166, 0.05) 0%, transparent 40%), var(--bg-gradient)"
+      background: "radial-gradient(circle at 10% 20%, rgba(14, 165, 233, 0.04) 0%, transparent 40%), radial-gradient(circle at 90% 80%, rgba(20, 184, 166, 0.04) 0%, transparent 40%), var(--bg-gradient)"
     }}>
-      <div style={{
+      
+      {/* Top Navbar: Language Selection */}
+      <header style={{
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
         width: "100%",
-        maxWidth: "960px",
-        display: "grid",
-        gridTemplateColumns: "1.2fr 1fr",
-        gap: "4rem",
-        alignItems: "center"
-      }} className="animate-fade-in">
-        
-        {/* Left Side: Pitch and Branding */}
-        <div>
-          <div style={{ display: "flex", alignItems: "center", gap: "1rem", marginBottom: "1.5rem" }}>
-            <div style={{
-              width: "48px",
-              height: "48px",
-              borderRadius: "12px",
-              background: "linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontWeight: 800,
-              fontSize: "1.5rem"
-            }}>
-              I
-            </div>
-            <h1 style={{ fontSize: "2.5rem", fontWeight: 800 }} className="text-gradient-primary">
-              I-Pass-A
-            </h1>
+        maxWidth: "1200px",
+        margin: "0 auto 3rem auto",
+        padding: "1rem 0"
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+          <div style={{
+            width: "36px",
+            height: "36px",
+            borderRadius: "8px",
+            background: "linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontWeight: 800,
+            fontSize: "1.1rem"
+          }}>
+            I
           </div>
-          
-          <h2 style={{ fontSize: "2rem", fontWeight: 700, lineHeight: 1.25, marginBottom: "1.5rem" }}>
-            AI-Powered Tutoring & Smart Exam Preparation
-          </h2>
-          
-          <p style={{ color: "var(--text-secondary)", fontSize: "1.1rem", marginBottom: "2.5rem", lineHeight: 1.6 }}>
-            Empowering students from Grades 1–12 with personalized AI learning. Study in English (Grades 9–12) or Afaan Oromo (Grades 1–8) with curriculum-grounded smart tutoring and practice exams.
-          </p>
-
-          <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
-            <div style={{ display: "flex", gap: "1rem", alignItems: "flex-start" }}>
-              <div style={{ padding: "0.5rem", background: "rgba(14, 165, 233, 0.1)", borderRadius: "8px", color: "var(--primary)" }}>
-                <BookOpen size={20} />
-              </div>
-              <div>
-                <h4 style={{ fontSize: "1.05rem", fontWeight: 600, marginBottom: "0.25rem" }}>Curriculum Grounded (RAG)</h4>
-                <p style={{ color: "var(--text-secondary)", fontSize: "0.9rem" }}>AI answers are strictly verified against approved school curriculum documents.</p>
-              </div>
-            </div>
-
-            <div style={{ display: "flex", gap: "1rem", alignItems: "flex-start" }}>
-              <div style={{ padding: "0.5rem", background: "rgba(20, 184, 166, 0.1)", borderRadius: "8px", color: "var(--secondary)" }}>
-                <GraduationCap size={20} />
-              </div>
-              <div>
-                <h4 style={{ fontSize: "1.05rem", fontWeight: 600, marginBottom: "0.25rem" }}>Custom Exam Generation</h4>
-                <p style={{ color: "var(--text-secondary)", fontSize: "0.9rem" }}>Generate mock exams by subject, topic, and difficulty with immediate grading & answer keys.</p>
-              </div>
-            </div>
-          </div>
+          <span style={{ fontSize: "1.25rem", fontWeight: 700 }} className="text-gradient-primary">
+            I-Pass-A
+          </span>
         </div>
 
-        {/* Right Side: Glass Login Form */}
-        <div className="glass-panel" style={{ padding: "2.5rem 2rem" }}>
-          <h3 style={{ fontSize: "1.5rem", fontWeight: 700, marginBottom: "0.5rem", textAlign: "center" }}>
-            {isLogin ? "Welcome Back" : "Create Student Account"}
-          </h3>
-          <p style={{ color: "var(--text-secondary)", fontSize: "0.875rem", marginBottom: "1.5rem", textAlign: "center" }}>
-            {isLogin ? "Sign in to access your AI Tutor" : "Sign up to begin your learning journey"}
-          </p>
+        {/* Clean Language Switcher Toggle */}
+        <button
+          onClick={() => setLang(lang === "EN" ? "AO" : "EN")}
+          className="btn btn-outline"
+          style={{
+            padding: "0.4rem 0.75rem",
+            fontSize: "0.8rem",
+            display: "flex",
+            alignItems: "center",
+            gap: "0.5rem"
+          }}
+        >
+          <Globe size={14} />
+          <span>{lang === "EN" ? "Afaan Oromoo" : "English"}</span>
+        </button>
+      </header>
 
-          {error && (
+      {/* Main Pitch/Form Area */}
+      <div style={{
+        flex: 1,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center"
+      }}>
+        <div style={{
+          width: "100%",
+          maxWidth: "1000px",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: "2rem"
+        }} className="animate-fade-in">
+
+          {/* STATE 1: Hero Pitch and Statistics */}
+          {viewState === "hero" && (
             <div style={{
-              background: error.includes("successfully") ? "rgba(34, 197, 94, 0.1)" : "rgba(239, 68, 68, 0.1)",
-              border: error.includes("successfully") ? "1px solid rgba(34, 197, 94, 0.2)" : "1px solid rgba(239, 68, 68, 0.2)",
-              color: error.includes("successfully") ? "var(--success)" : "var(--danger)",
-              padding: "0.75rem 1rem",
-              borderRadius: "var(--radius-sm)",
-              fontSize: "0.85rem",
-              marginBottom: "1.25rem",
-              textAlign: "center"
+              textAlign: "center",
+              maxWidth: "720px",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: "2.5rem"
             }}>
-              {error}
+              <div>
+                <h1 style={{ fontSize: "3rem", fontWeight: 800, lineHeight: 1.1, marginBottom: "1rem" }}>
+                  {t.subtitle}
+                </h1>
+                <p style={{ color: "var(--text-secondary)", fontSize: "1.15rem", lineHeight: 1.6 }}>
+                  {t.desc}
+                </p>
+              </div>
+
+              {/* Discover Call-to-Action */}
+              <button
+                onClick={() => setViewState("auth")}
+                className="btn btn-primary"
+                style={{
+                  padding: "0.9rem 2.2rem",
+                  fontSize: "1.1rem",
+                  borderRadius: "30px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.75rem"
+                }}
+              >
+                {t.discover} <ChevronRight size={18} />
+              </button>
+
+              {/* Statistics Grid */}
+              <div style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(3, 1fr)",
+                gap: "1.5rem",
+                width: "100%",
+                marginTop: "1.5rem"
+              }}>
+                {[
+                  { label: t.statStudents, desc: lang === "EN" ? "Studying Grade 1-12 curriculum" : "Kutaa 1-12 barachaa jiru" },
+                  { label: t.statExams, desc: lang === "EN" ? "Mock and practice tests taken" : "Qormaanni mock fudhatame" },
+                  { label: t.statSchools, desc: lang === "EN" ? "Schools using platform features" : "Manneen barumsaa itti fayyadaman" }
+                ].map((stat, idx) => (
+                  <div 
+                    key={idx} 
+                    className="glass-panel" 
+                    style={{ padding: "1.25rem", background: "rgba(255,255,255,0.01)", textAlign: "center" }}
+                  >
+                    <h3 style={{ fontSize: "1.25rem", color: "var(--primary)", fontWeight: 700 }}>
+                      {stat.label}
+                    </h3>
+                    <p style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginTop: "0.25rem" }}>
+                      {stat.desc}
+                    </p>
+                  </div>
+                ))}
+              </div>
+
             </div>
           )}
 
-          <form onSubmit={handleSubmit}>
-            {!isLogin && (
-              <div className="form-group">
-                <label className="form-label">Full Name</label>
-                <div style={{ position: "relative" }}>
-                  <UserIcon size={16} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)" }} />
-                  <input
-                    type="text"
-                    className="form-input"
-                    placeholder="John Doe"
-                    required
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    style={{ width: "100%", paddingLeft: "2.5rem" }}
-                  />
+          {/* STATE 2: Auth Login/Register Forms */}
+          {viewState === "auth" && (
+            <div 
+              className="glass-panel animate-fade-in" 
+              style={{
+                width: "100%",
+                maxWidth: "420px",
+                padding: "2.5rem 2rem",
+                position: "relative"
+              }}
+            >
+              {/* Back button to HERO */}
+              <button
+                onClick={() => { setViewState("hero"); setError(""); }}
+                style={{
+                  position: "absolute",
+                  left: "1.5rem",
+                  top: "1.5rem",
+                  background: "none",
+                  border: "none",
+                  color: "var(--text-secondary)",
+                  fontSize: "0.8rem",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.25rem"
+                }}
+              >
+                ← {t.backBtn}
+              </button>
+
+              <h3 style={{ fontSize: "1.5rem", fontWeight: 700, marginBottom: "0.25rem", marginTop: "1rem", textAlign: "center" }}>
+                {isLogin ? t.welcomeBack : t.createAcc}
+              </h3>
+              <p style={{ color: "var(--text-secondary)", fontSize: "0.85rem", marginBottom: "1.5rem", textAlign: "center" }}>
+                {isLogin ? t.welcomeSub : t.createSub}
+              </p>
+
+              {error && (
+                <div style={{
+                  background: error.includes("successfully") ? "rgba(34, 197, 94, 0.1)" : "rgba(239, 68, 68, 0.1)",
+                  border: error.includes("successfully") ? "1px solid rgba(34, 197, 94, 0.2)" : "1px solid rgba(239, 68, 68, 0.2)",
+                  color: error.includes("successfully") ? "var(--success)" : "var(--danger)",
+                  padding: "0.75rem 1rem",
+                  borderRadius: "var(--radius-sm)",
+                  fontSize: "0.85rem",
+                  marginBottom: "1.25rem",
+                  textAlign: "center"
+                }}>
+                  {error}
                 </div>
-              </div>
-            )}
+              )}
 
-            <div className="form-group">
-              <label className="form-label">Email Address</label>
-              <div style={{ position: "relative" }}>
-                <Mail size={16} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)" }} />
-                <input
-                  type="email"
-                  className="form-input"
-                  placeholder="name@school.com"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  style={{ width: "100%", paddingLeft: "2.5rem" }}
-                />
-              </div>
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Password</label>
-              <div style={{ position: "relative" }}>
-                <Lock size={16} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)" }} />
-                <input
-                  type="password"
-                  className="form-input"
-                  placeholder="••••••••"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  style={{ width: "100%", paddingLeft: "2.5rem" }}
-                />
-              </div>
-            </div>
-
-            {!isLogin && (
-              <>
-                <div className="form-group">
-                  <label className="form-label">I am a...</label>
-                  <select
-                    className="form-select"
-                    value={role}
-                    onChange={(e) => setRole(e.target.value)}
-                    style={{ width: "100%" }}
-                  >
-                    <option value="student">Student</option>
-                    <option value="teacher">Teacher</option>
-                    <option value="admin">Content Administrator</option>
-                  </select>
-                </div>
-
-                {role === "student" && (
-                  <div className="form-group animate-fade-in">
-                    <label className="form-label">Select Grade / Kutaa</label>
-                    <select
-                      className="form-select"
-                      value={grade}
-                      onChange={(e) => setGrade(e.target.value)}
-                      style={{ width: "100%" }}
-                    >
-                      {Array.from({ length: 12 }, (_, i) => String(i + 1)).map((g) => (
-                        <option key={g} value={g}>Grade {g}</option>
-                      ))}
-                    </select>
+              <form onSubmit={handleSubmit}>
+                {!isLogin && (
+                  <div className="form-group">
+                    <label className="form-label">{t.nameLabel}</label>
+                    <div style={{ position: "relative" }}>
+                      <UserIcon size={16} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)" }} />
+                      <input
+                        type="text"
+                        className="form-input"
+                        placeholder="John Doe"
+                        required
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        style={{ width: "100%", paddingLeft: "2.5rem" }}
+                      />
+                    </div>
                   </div>
                 )}
-              </>
-            )}
 
-            <button
-              type="submit"
-              className="btn btn-primary"
-              disabled={submitting}
-              style={{ width: "100%", marginTop: "1rem" }}
-            >
-              {submitting ? "Processing..." : isLogin ? "Sign In" : "Register"}
-            </button>
-          </form>
+                <div className="form-group">
+                  <label className="form-label">{t.emailLabel}</label>
+                  <div style={{ position: "relative" }}>
+                    <Mail size={16} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)" }} />
+                    <input
+                      type="email"
+                      className="form-input"
+                      placeholder="name@school.com"
+                      required
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      style={{ width: "100%", paddingLeft: "2.5rem" }}
+                    />
+                  </div>
+                </div>
 
-          <div style={{
-            marginTop: "1.5rem",
-            textAlign: "center",
-            fontSize: "0.85rem",
-            color: "var(--text-secondary)"
-          }}>
-            {isLogin ? "Don't have an account?" : "Already have an account?"}{" "}
-            <button
-              onClick={() => {
-                setIsLogin(!isLogin);
-                setError("");
-              }}
-              style={{
-                background: "none",
-                border: "none",
-                color: "var(--primary)",
-                fontWeight: 600,
-                cursor: "pointer",
-                padding: 0
-              }}
-            >
-              {isLogin ? "Sign Up" : "Sign In"}
-            </button>
-          </div>
+                <div className="form-group">
+                  <label className="form-label">{t.passLabel}</label>
+                  <div style={{ position: "relative" }}>
+                    <Lock size={16} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)" }} />
+                    <input
+                      type="password"
+                      className="form-input"
+                      placeholder="••••••••"
+                      required
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      style={{ width: "100%", paddingLeft: "2.5rem" }}
+                    />
+                  </div>
+                </div>
+
+                {!isLogin && (
+                  <>
+                    <div className="form-group">
+                      <label className="form-label">{t.roleLabel}</label>
+                      <select
+                        className="form-select"
+                        value={role}
+                        onChange={(e) => setRole(e.target.value)}
+                        style={{ width: "100%" }}
+                      >
+                        <option value="student">{t.roleStudent}</option>
+                        <option value="teacher">{t.roleTeacher}</option>
+                        <option value="admin">{t.roleAdmin}</option>
+                      </select>
+                    </div>
+
+                    {role === "student" && (
+                      <div className="form-group animate-fade-in">
+                        <label className="form-label">{t.gradeLabel}</label>
+                        <select
+                          className="form-select"
+                          value={grade}
+                          onChange={(e) => setGrade(e.target.value)}
+                          style={{ width: "100%" }}
+                        >
+                          {Array.from({ length: 12 }, (_, i) => String(i + 1)).map((g) => (
+                            <option key={g} value={g}>Grade {g}</option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+                  </>
+                )}
+
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  disabled={submitting}
+                  style={{ width: "100%", marginTop: "1rem" }}
+                >
+                  {submitting ? "..." : isLogin ? t.signInBtn : t.signUpBtn}
+                </button>
+              </form>
+
+              <div style={{
+                marginTop: "1.5rem",
+                textAlign: "center",
+                fontSize: "0.85rem",
+                color: "var(--text-secondary)"
+              }}>
+                {isLogin ? t.noAccount : t.haveAccount}{" "}
+                <button
+                  onClick={() => {
+                    setIsLogin(!isLogin);
+                    setError("");
+                  }}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    color: "var(--primary)",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    padding: 0
+                  }}
+                >
+                  {isLogin ? t.signUpBtn : t.signInBtn}
+                </button>
+              </div>
+            </div>
+          )}
+
         </div>
-
       </div>
     </main>
   );

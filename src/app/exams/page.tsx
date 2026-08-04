@@ -19,7 +19,7 @@ import {
 
 interface Question {
   id: number;
-  type: "multiple_choice" | "short_answer";
+  type: "multiple_choice" | "true_false" | "blank_space" | "definition";
   question_text: string;
   options?: string[];
 }
@@ -52,10 +52,11 @@ export default function ExamsPage() {
   const englishSubjects = ["English", "Biology", "Chemistry", "Physics", "Maths"];
   const oromoSubjects = ["Afaan Oromo", "Saayinsii", "Hawaasummaa", "Herrega"];
 
-  // States
+  // Form States
   const [subject, setSubject] = useState("");
   const [topic, setTopic] = useState("");
   const [difficulty, setDifficulty] = useState("medium");
+  const [examTypes, setExamTypes] = useState<string[]>(["multiple_choice"]);
   const [savedExams, setSavedExams] = useState<SavedExam[]>([]);
   
   const [activeExam, setActiveExam] = useState<{ id: number; subject: string; topic: string; questions: Question[] } | null>(null);
@@ -66,7 +67,7 @@ export default function ExamsPage() {
   const [generating, setGenerating] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [fetchingSaved, setFetchingSaved] = useState(false);
-  const [viewingSaved, setViewingSaved] = useState(true); // Toggle between generator and saved list
+  const [viewingSaved, setViewingSaved] = useState(true); // Toggle saved vs generate
 
   useEffect(() => {
     if (!loading && !user) {
@@ -83,6 +84,53 @@ export default function ExamsPage() {
   if (loading || !user) return null;
 
   const subjects = user.language === "Afaan Oromo" ? oromoSubjects : englishSubjects;
+  const isAO = user.language === "Afaan Oromo";
+
+  // Single-language text translations based on user language (No mixed slashes)
+  const t = {
+    headerTitle: isAO ? "Wiirtuu Qophii Qormaataa" : "Exam Preparation Module",
+    headerDesc: isAO 
+      ? "Qormaata shaakalbaa mataduree barumsa keetiin uumi ykn kan ol-kaayame fudhadhu."
+      : "Generate custom practice tests or review saved exams based on your curriculum.",
+    btnSaved: isAO ? "Qormaata Ol-kaayame" : "Saved Exams",
+    btnNew: isAO ? "Qormaata Uumi" : "New Exam",
+    subHeading: isAO ? "Qormaata Shaakalbaa Haaraa Uumi" : "Generate New Practice Exam",
+    labelSubject: isAO ? "Gosa Barnootaa" : "Subject",
+    labelTopic: isAO ? "Mata-duree / Boqonnaa" : "Topic / Chapter",
+    placeholderTopic: isAO ? "fkn. Boqonnaa 2, Caasluga" : "e.g. Chapter 2, Tenses, Cell Structure",
+    labelDifficulty: isAO ? "Sadarkaa" : "Difficulty",
+    optEasy: isAO ? "Salphaa" : "Easy",
+    optMedium: isAO ? "Giddu-galeessa" : "Medium",
+    optHard: isAO ? "Jabaa" : "Hard",
+    labelTypes: isAO ? "Gosa Gaaffilee Filadhu" : "Select Question Types",
+    typeMC: isAO ? "Filannoo (Multiple Choice)" : "Multiple Choice",
+    typeTF: isAO ? "Dhugaa / Soba (True/False)" : "True or False",
+    typeBlank: isAO ? "Iddoo Duudaa Guuti (Blank Space)" : "Fill in the Blank",
+    typeDefine: isAO ? "Hiika Ibsi (Definition)" : "Term Definition",
+    btnSubmitGen: isAO ? "Qormaata Uumi" : "Generate Practice Exam",
+    savedHeader: isAO ? "Qormaata Grade " + user.grade + " Ol-kaayame" : "Saved Exams for Grade " + user.grade,
+    noSaved: isAO 
+      ? "Qormaanni ol-kaayame kutaa barumsaa keetiif hin argamne." 
+      : "No exams have been generated yet for Grade " + user.grade + ".",
+    btnStartFirst: isAO ? "Qormaata Jalqabaa Uumi" : "Generate First Exam",
+    btnTake: isAO ? "Qormaata Fudhadhu" : "Take Exam",
+    questionsCount: isAO ? "Gaaffilee" : "Questions",
+    completingHeader: isAO ? "Qormaanni Xumurameera!" : "Exam Completed!",
+    scoreText: isAO ? "Qabxii Keessan:" : "Your Score:",
+    correctText: isAO ? "Deebii Sirrii" : "Correct Answer",
+    yourAnswerText: isAO ? "Deebii Keessan" : "Your Answer",
+    explanationText: isAO ? "Ibsa Deebii" : "Explanation",
+    btnSubmitExam: isAO ? "Qormaata Ergi" : "Submit Exam Answers",
+    btnPrint: isAO ? "Qormaata Printi Godhi" : "Print / Export",
+    btnClose: isAO ? "Cufi" : "Close Exam",
+    writeShort: isAO ? "Deebii gabaabaa kee barreessi..." : "Write your short answer here...",
+    writeDefine: isAO ? "Hiika ykn ibsa kee barreessi..." : "Write your definition/explanation here...",
+    typeSelectErr: isAO 
+      ? "Maaloo uguurruu gosa gaaffii yoo xiqqaate tokko filadhu." 
+      : "Please select at least one question type.",
+    correctIndicator: isAO ? "Sirrii dha" : "Correct",
+    incorrectIndicator: isAO ? "Sirrii miti" : "Incorrect"
+  };
 
   const fetchSavedExams = async () => {
     if (!user) return;
@@ -117,6 +165,10 @@ export default function ExamsPage() {
   const handleGenerate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!subject || !topic || generating) return;
+    if (examTypes.length === 0) {
+      alert(t.typeSelectErr);
+      return;
+    }
 
     setGenerating(true);
     setAssessment(null);
@@ -130,7 +182,8 @@ export default function ExamsPage() {
           subject,
           topic,
           difficulty,
-          grade: user.grade
+          grade: user.grade,
+          question_types: examTypes
         })
       });
 
@@ -138,7 +191,7 @@ export default function ExamsPage() {
         const data = await response.json();
         setActiveExam(data);
         setViewingSaved(false);
-        fetchSavedExams(); // Refresh saved list in background
+        fetchSavedExams(); // Refresh saved list
       }
     } catch (e) {
       console.error(e);
@@ -170,6 +223,14 @@ export default function ExamsPage() {
     } catch (e) {
       console.error(e);
     }
+  };
+
+  const toggleExamType = (type: string) => {
+    setExamTypes(prev => 
+      prev.includes(type) 
+        ? prev.filter(t => t !== type) 
+        : [...prev, type]
+    );
   };
 
   const handleOptionChange = (questionId: number, optionValue: string) => {
@@ -204,7 +265,7 @@ export default function ExamsPage() {
         body: JSON.stringify({
           exam_id: activeExam.id,
           answers: formattedAnswers,
-          student_id: user.id  // Log the attempt under current student profile ID
+          student_id: user.id
         })
       });
 
@@ -298,10 +359,10 @@ export default function ExamsPage() {
         }}>
           <div>
             <h1 style={{ fontSize: "2rem", fontWeight: 700, marginBottom: "0.25rem" }}>
-              Exam Preparation Module
+              {t.headerTitle}
             </h1>
             <p style={{ color: "var(--text-secondary)" }}>
-              Generate custom practice tests or review saved exams.
+              {t.headerDesc}
             </p>
           </div>
           
@@ -310,13 +371,13 @@ export default function ExamsPage() {
               onClick={() => { setViewingSaved(true); setActiveExam(null); setAssessment(null); }}
               className={`btn ${viewingSaved ? "btn-primary" : "btn-outline"}`}
             >
-              <ListFilter size={16} /> Saved Exams
+              <ListFilter size={16} /> {t.btnSaved}
             </button>
             <button 
               onClick={() => { setViewingSaved(false); setActiveExam(null); setAssessment(null); }}
               className={`btn ${!viewingSaved && !activeExam ? "btn-primary" : "btn-outline"}`}
             >
-              <Plus size={16} /> New Exam
+              <Plus size={16} /> {t.btnNew}
             </button>
           </div>
         </div>
@@ -345,19 +406,19 @@ export default function ExamsPage() {
           {!activeExam && !viewingSaved && (
             <div className="glass-panel no-print animate-fade-in" style={{ padding: "2rem" }}>
               <h2 style={{ fontSize: "1.25rem", display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "1.5rem" }}>
-                <Plus size={20} style={{ color: "var(--primary)" }} /> Generate Practice Exam
+                <Plus size={20} style={{ color: "var(--primary)" }} /> {t.subHeading}
               </h2>
 
               <form onSubmit={handleGenerate}>
                 <div className="form-group">
-                  <label className="form-label">Subject / Gosa Barnootaa</label>
+                  <label className="form-label">{t.labelSubject}</label>
                   <select 
                     className="form-select" 
                     value={subject} 
                     onChange={(e) => setSubject(e.target.value)}
                     required
                   >
-                    <option value="">-- Choose Subject --</option>
+                    <option value="">-- {isAO ? "Barnoota Filadhu" : "Choose Subject"} --</option>
                     {subjects.map(sub => (
                       <option key={sub} value={sub}>{sub}</option>
                     ))}
@@ -365,11 +426,11 @@ export default function ExamsPage() {
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">Topic / Mata-duree</label>
+                  <label className="form-label">{t.labelTopic}</label>
                   <input
                     type="text"
                     className="form-input"
-                    placeholder="e.g. Tenses, Cell Structure, Caasluga"
+                    placeholder={t.placeholderTopic}
                     required
                     value={topic}
                     onChange={(e) => setTopic(e.target.value)}
@@ -377,16 +438,56 @@ export default function ExamsPage() {
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">Difficulty / Saffata</label>
+                  <label className="form-label">{t.labelDifficulty}</label>
                   <select 
                     className="form-select"
                     value={difficulty}
                     onChange={(e) => setDifficulty(e.target.value)}
                   >
-                    <option value="easy">Easy / Salphaa</option>
-                    <option value="medium">Medium / Giddu-galeessa</option>
-                    <option value="hard">Hard / Jabaa</option>
+                    <option value="easy">{t.optEasy}</option>
+                    <option value="medium">{t.optMedium}</option>
+                    <option value="hard">{t.optHard}</option>
                   </select>
+                </div>
+
+                {/* Multi-Select Question Types Checkbox Group */}
+                <div className="form-group" style={{ marginBottom: "1.5rem" }}>
+                  <label className="form-label">{t.labelTypes}</label>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem", marginTop: "0.25rem" }}>
+                    {[
+                      { key: "multiple_choice", label: t.typeMC },
+                      { key: "true_false", label: t.typeTF },
+                      { key: "blank_space", label: t.typeBlank },
+                      { key: "definition", label: t.typeDefine }
+                    ].map((type) => {
+                      const isChecked = examTypes.includes(type.key);
+                      return (
+                        <label 
+                          key={type.key}
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "0.75rem",
+                            cursor: "pointer",
+                            padding: "0.5rem 0.75rem",
+                            borderRadius: "6px",
+                            background: isChecked ? "rgba(255,255,255,0.03)" : "transparent",
+                            border: "1px solid",
+                            borderColor: isChecked ? "var(--glass-border)" : "transparent",
+                            transition: "all var(--transition-fast)"
+                          }}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() => toggleExamType(type.key)}
+                            style={{ width: "16px", height: "16px", cursor: "pointer" }}
+                          />
+                          <span style={{ fontSize: "0.9rem" }}>{type.label}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
                 </div>
 
                 <button 
@@ -395,7 +496,7 @@ export default function ExamsPage() {
                   disabled={generating || !subject || !topic}
                   style={{ width: "100%", marginTop: "1rem" }}
                 >
-                  {generating ? "Generating..." : "Generate Practice Exam"}
+                  {generating ? (isAO ? "Uumamaa jira..." : "Generating...") : t.btnSubmitGen}
                 </button>
               </form>
             </div>
@@ -405,21 +506,21 @@ export default function ExamsPage() {
           {!activeExam && viewingSaved && (
             <div className="glass-panel no-print animate-fade-in" style={{ padding: "2rem", gridColumn: "1 / -1" }}>
               <h2 style={{ fontSize: "1.25rem", display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "1.5rem" }}>
-                <FileText size={20} style={{ color: "var(--secondary)" }} /> Saved Exams for Grade {user.grade}
+                <FileText size={20} style={{ color: "var(--secondary)" }} /> {t.savedHeader}
               </h2>
 
               {fetchingSaved ? (
-                <p>Loading saved exams...</p>
+                <p>{isAO ? "Loading ol-kaayame..." : "Loading saved exams..."}</p>
               ) : savedExams.length === 0 ? (
                 <div style={{ textAlign: "center", padding: "3rem 1rem", color: "var(--text-secondary)" }}>
                   <HelpCircle size={32} style={{ color: "var(--text-muted)", marginBottom: "0.5rem" }} />
-                  <p>No exams have been generated yet for Grade {user.grade}.</p>
+                  <p>{t.noSaved}</p>
                   <button 
                     onClick={() => setViewingSaved(false)}
                     className="btn btn-outline"
                     style={{ marginTop: "1rem" }}
                   >
-                    Generate First Exam
+                    {t.btnStartFirst}
                   </button>
                 </div>
               ) : (
@@ -443,13 +544,15 @@ export default function ExamsPage() {
                         </span>
                         <h4 style={{ fontSize: "1.1rem", marginTop: "0.35rem", marginBottom: "0.15rem" }}>{ex.topic}</h4>
                         <span style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>
-                          Difficulty: <strong style={{ textTransform: "capitalize" }}>{ex.difficulty}</strong>
+                          {t.labelDifficulty}: <strong style={{ textTransform: "capitalize" }}>
+                            {ex.difficulty === "easy" ? t.optEasy : ex.difficulty === "hard" ? t.optHard : t.optMedium}
+                          </strong>
                         </span>
                       </div>
                       
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "auto", paddingTop: "0.5rem", borderTop: "1px solid var(--glass-border)" }}>
                         <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
-                          {ex.question_count} Questions
+                          {ex.question_count} {t.questionsCount}
                         </span>
                         
                         <button 
@@ -457,7 +560,7 @@ export default function ExamsPage() {
                           className="btn btn-primary"
                           style={{ padding: "0.35rem 0.75rem", fontSize: "0.8rem" }}
                         >
-                          <Play size={12} /> Take Exam
+                          <Play size={12} /> {t.btnTake}
                         </button>
                       </div>
                     </div>
@@ -481,21 +584,21 @@ export default function ExamsPage() {
               }}>
                 <div>
                   <span style={{ color: "var(--primary)", fontSize: "0.85rem", fontWeight: 600, textTransform: "uppercase" }}>
-                    {activeExam.subject} Practice test
+                    {activeExam.subject}
                   </span>
-                  <h2 style={{ fontSize: "1.5rem", fontWeight: 700 }}>Topic: {activeExam.topic}</h2>
+                  <h2 style={{ fontSize: "1.5rem", fontWeight: 700 }}>{t.labelTopic}: {activeExam.topic}</h2>
                 </div>
 
                 <div style={{ display: "flex", gap: "0.75rem" }}>
                   <button onClick={handlePrint} className="btn btn-outline">
-                    <Download size={16} /> Print / Export
+                    <Download size={16} /> {t.btnPrint}
                   </button>
                   <button 
                     onClick={() => { setActiveExam(null); setAssessment(null); }}
                     className="btn btn-outline"
                     style={{ color: "var(--danger)", borderColor: "rgba(239,68,68,0.2)" }}
                   >
-                    Close Exam
+                    {t.btnClose}
                   </button>
                 </div>
               </div>
@@ -511,9 +614,9 @@ export default function ExamsPage() {
                   textAlign: "center"
                 }}>
                   <Award size={40} style={{ color: "var(--secondary)", marginBottom: "0.5rem" }} />
-                  <h3 style={{ fontSize: "1.5rem", fontWeight: 700 }}>Exam Completed!</h3>
+                  <h3 style={{ fontSize: "1.5rem", fontWeight: 700 }}>{t.completingHeader}</h3>
                   <p style={{ fontSize: "1.1rem", color: "#fff", marginTop: "0.25rem" }}>
-                    Your Score: <strong style={{ color: "var(--secondary)", fontSize: "1.75rem" }}>{assessment.score.toFixed(1)}%</strong>
+                    {t.scoreText} <strong style={{ color: "var(--secondary)", fontSize: "1.75rem" }}>{assessment.score.toFixed(1)}%</strong>
                   </p>
                 </div>
               )}
@@ -523,6 +626,11 @@ export default function ExamsPage() {
                 {activeExam.questions.map((q, idx) => {
                   const qResult = assessment?.results.find(r => r.id === q.id);
                   const isCorrect = qResult?.is_correct;
+                  
+                  const isChoice = q.type === "multiple_choice" || q.type === "true_false";
+                  const renderOptions = q.options || (q.type === "true_false" 
+                    ? (isAO ? ["Dhugaa", "Soba"] : ["True", "False"])
+                    : []);
                   
                   return (
                     <div 
@@ -542,11 +650,11 @@ export default function ExamsPage() {
                           <div className="no-print">
                             {isCorrect ? (
                               <span style={{ display: "flex", alignItems: "center", gap: "0.25rem", color: "var(--success)", fontSize: "0.85rem", fontWeight: 600 }}>
-                                <CheckCircle size={16} /> Correct
+                                <CheckCircle size={16} /> {t.correctIndicator}
                               </span>
                             ) : (
                               <span style={{ display: "flex", alignItems: "center", gap: "0.25rem", color: "var(--danger)", fontSize: "0.85rem", fontWeight: 600 }}>
-                                <XCircle size={16} /> Incorrect
+                                <XCircle size={16} /> {t.incorrectIndicator}
                               </span>
                             )}
                           </div>
@@ -555,9 +663,9 @@ export default function ExamsPage() {
 
                       {/* Options or text input field */}
                       <div style={{ marginTop: "1rem" }}>
-                        {q.type === "multiple_choice" && q.options ? (
+                        {isChoice && renderOptions.length > 0 ? (
                           <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-                            {q.options.map((opt, oIdx) => {
+                            {renderOptions.map((opt, oIdx) => {
                               const isChecked = answers[q.id] === opt;
                               return (
                                 <label 
@@ -594,7 +702,7 @@ export default function ExamsPage() {
                             <input
                               type="text"
                               className="form-input"
-                              placeholder="Write your short answer here..."
+                              placeholder={q.type === "definition" ? t.writeDefine : t.writeShort}
                               value={answers[q.id] || ""}
                               onChange={(e) => handleTextChange(q.id, e.target.value)}
                               disabled={!!assessment}
@@ -614,15 +722,15 @@ export default function ExamsPage() {
                           borderRadius: "8px"
                         }}>
                           <div style={{ fontSize: "0.85rem", marginBottom: "0.25rem" }}>
-                            <strong>Correct Answer:</strong> <span style={{ color: "var(--secondary)" }}>{qResult.correct_answer}</span>
+                            <strong>{t.correctText}:</strong> <span style={{ color: "var(--secondary)" }}>{qResult.correct_answer}</span>
                           </div>
                           {qResult.student_answer && (
                             <div style={{ fontSize: "0.85rem", marginBottom: "0.5rem" }}>
-                              <strong>Your Answer:</strong> <span>{qResult.student_answer}</span>
+                              <strong>{t.yourAnswerText}:</strong> <span>{qResult.student_answer}</span>
                             </div>
                           )}
                           <p style={{ fontSize: "0.85rem", color: "var(--text-secondary)", lineHeight: 1.5 }}>
-                            <strong>Explanation:</strong> {qResult.explanation}
+                            <strong>{t.explanationText}:</strong> {qResult.explanation}
                           </p>
                         </div>
                       )}
@@ -640,7 +748,7 @@ export default function ExamsPage() {
                     className="btn btn-primary"
                     disabled={submitting || Object.keys(answers).length < activeExam.questions.length}
                   >
-                    {submitting ? "Scoring..." : "Submit Exam Answers"}
+                    {submitting ? "..." : t.btnSubmitExam}
                   </button>
                 </div>
               )}

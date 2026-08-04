@@ -112,7 +112,7 @@ export default function Sidebar() {
       }}>
         <div className="form-group" style={{ margin: 0 }}>
           <label className="form-label" style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-            <GraduationCap size={16} /> Grade / Kutaa
+            <GraduationCap size={16} /> {user.language === "Afaan Oromo" ? "Kutaa" : "Grade"}
           </label>
           <select 
             className="form-select" 
@@ -121,7 +121,7 @@ export default function Sidebar() {
             style={{ padding: "0.5rem 0.75rem", fontSize: "0.85rem", background: "rgba(0,0,0,0.4)" }}
           >
             {Array.from({ length: 12 }, (_, i) => String(i + 1)).map((g) => (
-              <option key={g} value={g}>Grade {g}</option>
+              <option key={g} value={g}>{user.language === "Afaan Oromo" ? `Kutaa ${g}` : `Grade ${g}`}</option>
             ))}
           </select>
         </div>
@@ -138,7 +138,7 @@ export default function Sidebar() {
           border: "1px solid var(--glass-border)"
         }}>
           <Globe size={14} style={{ color: "var(--secondary)" }} />
-          <span>Language: <strong>{user.language}</strong></span>
+          <span>{user.language === "Afaan Oromo" ? "Afaan" : "Language"}: <strong>{user.language}</strong></span>
         </div>
       </div>
 
@@ -155,6 +155,12 @@ export default function Sidebar() {
           .map((item) => {
             const Icon = item.icon;
             const isActive = pathname.startsWith(item.path);
+            const displayName = item.path === "/tutor" 
+              ? "AI Tutor" 
+              : item.path === "/exams" 
+                ? (user.language === "Afaan Oromo" ? "Qophii Qormaataa" : "Exam Prep") 
+                : (user.language === "Afaan Oromo" ? "Bulchiinsa" : "Admin Panel");
+                
             return (
               <Link 
                 key={item.path} 
@@ -176,7 +182,7 @@ export default function Sidebar() {
                 className={!isActive ? "glass-panel-hover" : ""}
               >
                 <Icon size={18} style={{ color: isActive ? "var(--primary)" : "inherit" }} />
-                {item.name}
+                {displayName}
               </Link>
             );
           })}
@@ -210,7 +216,11 @@ export default function Sidebar() {
               {user.name}
             </h4>
             <span style={{ fontSize: "0.75rem", color: "var(--text-secondary)", textTransform: "capitalize" }}>
-              {user.role}
+              {user.role === "student" 
+                ? (user.language === "Afaan Oromo" ? "Barataa" : "Student") 
+                : user.role === "teacher" 
+                  ? (user.language === "Afaan Oromo" ? "Barsiisaa" : "Teacher") 
+                  : (user.language === "Afaan Oromo" ? "Bulchaa" : "Administrator")}
             </span>
           </div>
         </div>
@@ -229,7 +239,7 @@ export default function Sidebar() {
             color: "var(--danger)"
           }}
         >
-          <LogOut size={14} /> Log Out
+          <LogOut size={14} /> {user.language === "Afaan Oromo" ? "Ba'i" : "Log Out"}
         </button>
       </div>
     </aside>
