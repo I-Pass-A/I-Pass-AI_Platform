@@ -160,13 +160,13 @@ export default function Home() {
         margin: "0 auto 3rem auto",
         padding: "1rem 0"
       }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.35rem" }}>
           <img 
             src="/logo.png" 
             alt="I-Pass-A Logo" 
-            style={{ width: "36px", height: "36px", borderRadius: "8px", objectFit: "cover" }} 
+            style={{ width: "72px", height: "72px", borderRadius: "12px", objectFit: "cover" }} 
           />
-          <span style={{ fontSize: "1.25rem", fontWeight: 700 }} className="text-gradient-primary">
+          <span style={{ fontSize: "1.35rem", fontWeight: 800 }} className="text-gradient-primary">
             I-Pass-A
           </span>
         </div>
