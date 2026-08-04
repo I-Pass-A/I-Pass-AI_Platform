@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { GoogleGenAI } from "@google/genai";
-// @ts-ignore
-import pdf from "pdf-parse";
 
 export async function POST(req: NextRequest) {
+  // Move require inside POST to prevent evaluation crash (DOMMatrix is not defined) during Next.js build time
+  const pdf = require("pdf-parse");
+
   try {
     const formData = await req.formData();
     const file = formData.get("file") as File;
