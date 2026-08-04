@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/context/AuthContext";
 import Sidebar from "@/components/Sidebar";
 import { useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabase";
 import { 
   MessageSquare, 
   Send, 
@@ -32,7 +33,7 @@ interface SessionInfo {
 }
 
 export default function TutorPage() {
-  const { user, token, loading } = useAuth();
+  const { user, loading } = useAuth();
   const router = useRouter();
   
   // Subjects mapping based on language / grade
@@ -57,12 +58,12 @@ export default function TutorPage() {
     }
   }, [user, loading, router]);
 
-  // Load user sessions when token or user language/grade change
+  // Load user sessions when user changes
   useEffect(() => {
-    if (token) {
+    if (user) {
       fetchSessions();
     }
-  }, [token, user?.language, user?.grade]);
+  }, [user?.language, user?.grade, user?.id]);
 
   // Auto scroll to bottom on new messages
   useEffect(() => {
@@ -75,20 +76,45 @@ export default function TutorPage() {
   const subjects = user.language === "Afaan Oromo" ? oromoSubjects : englishSubjects;
 
   const fetchSessions = async () => {
+    if (!user) return;
     setFetchingSessions(true);
     try {
-      const response = await fetch("http://localhost:8000/api/tutor/sessions", {
-        headers: { "Authorization": `Bearer ${token}` }
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setSessions(data);
+      const { data, error } = await supabase
+        .from("tutor_sessions")
+        .select(`
+          id, 
+          subject, 
+          started_at,
+          tutor_messages (
+            content,
+            timestamp
+          )
+        `)
+        .eq("user_id", user.id);
         
-        // If there is an active session, make sure it matches the new subjects list
-        // Otherwise, select the first session or clear active session
-        if (data.length > 0 && !activeSessionId) {
-          loadSession(data[0].id);
-        }
+      if (error) throw error;
+      
+      const formattedSessions: SessionInfo[] = (data || []).map((s: any) => {
+        // Sort messages locally to find the latest
+        const sortedMsgs = [...s.tutor_messages].sort((a: any, b: any) => 
+          new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+        );
+        return {
+          id: s.id,
+          subject: s.subject,
+          started_at: s.started_at,
+          last_message: sortedMsgs.length > 0 ? sortedMsgs[0].content.slice(0, 60) + "..." : "No messages"
+        };
+      });
+
+      // Sort sessions by started_at desc
+      formattedSessions.sort((a, b) => new Date(b.started_at).getTime() - new Date(a.started_at).getTime());
+      
+      setSessions(formattedSessions);
+      
+      // Load first session automatically if none active
+      if (formattedSessions.length > 0 && !activeSessionId) {
+        loadSession(formattedSessions[0].id);
       }
     } catch (e) {
       console.error(e);
@@ -101,13 +127,28 @@ export default function TutorPage() {
     setActiveSessionId(id);
     setFetchingMessages(true);
     try {
-      const response = await fetch(`http://localhost:8000/api/tutor/sessions/${id}`, {
-        headers: { "Authorization": `Bearer ${token}` }
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setMessages(data.messages);
-        setSelectedSubject(data.subject);
+      const { data, error } = await supabase
+        .from("tutor_messages")
+        .select("id, sender, content, timestamp")
+        .eq("session_id", id)
+        .order("timestamp", { ascending: true });
+        
+      if (error) throw error;
+      
+      setMessages(data || []);
+      
+      // Load subject name from sessions list
+      const activeSess = sessions.find(s => s.id === id);
+      if (activeSess) {
+        setSelectedSubject(activeSess.subject);
+      } else {
+        // Query database directly if not in state
+        const { data: sessData } = await supabase
+          .from("tutor_sessions")
+          .select("subject")
+          .eq("id", id)
+          .single();
+        if (sessData) setSelectedSubject(sessData.subject);
       }
     } catch (e) {
       console.error(e);
@@ -117,23 +158,23 @@ export default function TutorPage() {
   };
 
   const startNewSession = async (subject: string) => {
-    if (!subject) return;
+    if (!subject || !user) return;
     try {
-      const response = await fetch("http://localhost:8000/api/tutor/sessions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
-        },
-        body: JSON.stringify({ subject })
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setActiveSessionId(data.id);
-        setMessages([]);
-        setSelectedSubject(subject);
-        fetchSessions(); // Refresh sessions list
-      }
+      const { data, error } = await supabase
+        .from("tutor_sessions")
+        .insert({ 
+          subject, 
+          user_id: user.id 
+        })
+        .select()
+        .single();
+        
+      if (error) throw error;
+      
+      setActiveSessionId(data.id);
+      setMessages([]);
+      setSelectedSubject(subject);
+      await fetchSessions(); // Refresh sessions list
     } catch (e) {
       console.error(e);
     }
@@ -147,7 +188,7 @@ export default function TutorPage() {
     setInputText("");
     setSending(true);
 
-    // Append student message locally
+    // Append student message locally for instant response feel
     const studentMsg: Message = {
       sender: "student",
       content: queryText,
@@ -156,12 +197,9 @@ export default function TutorPage() {
     setMessages(prev => [...prev, studentMsg]);
 
     try {
-      const response = await fetch("http://localhost:8000/api/tutor/chat", {
+      const response = await fetch("/api/tutor/chat", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           session_id: activeSessionId,
           query: queryText,
@@ -179,14 +217,14 @@ export default function TutorPage() {
           out_of_scope: data.out_of_scope
         };
         setMessages(prev => [...prev, tutorMsg]);
-        fetchSessions(); // Refresh list to show updated last message
+        fetchSessions(); // Refresh session metadata text
       } else {
         throw new Error("Failed to generate response");
       }
     } catch (err: any) {
       const errorMsg: Message = {
         sender: "tutor",
-        content: `Error: Could not connect to AI Tutor. Please check that the backend server is running.`,
+        content: `Error: Could not connect to AI Tutor. Please check that Next.js Server API is active.`,
         timestamp: new Date().toISOString(),
         out_of_scope: true
       };

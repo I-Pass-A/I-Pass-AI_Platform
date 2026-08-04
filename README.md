@@ -1,10 +1,13 @@
-# I-Pass-A: AI-Powered Tutor & Sample Exam Prep
+# I-Pass-A: AI-Powered Tutor & Sample Exam Prep (Supabase Version)
 
 **I-Pass-A** is an AI-powered tutor and practice exam preparation web platform designed for Grades 1–12. It delivers curriculum-grounded learning across all subjects:
 - **Grades 9–12**: Delivered in **English**.
 - **Grades 1–6 & 7–8**: Delivered in **Afaan Oromo**.
 
-The project uses a **Retrieval-Augmented Generation (RAG)** pipeline to ground AI responses in approved textbooks/materials and is built with **FastAPI** (Python backend) and **Next.js** (React frontend).
+This version of **I-Pass-A** uses a serverless unified **Next.js + Supabase** stack, utilizing:
+- **Supabase Auth** for production-grade role-based user management.
+- **Supabase Database (PostgreSQL)** for session and exam storage.
+- **pgvector** for semantic vector similarity chunk retrieval in our RAG pipeline.
 
 ---
 
@@ -12,31 +15,30 @@ The project uses a **Retrieval-Augmented Generation (RAG)** pipeline to ground A
 
 ```
 I-Pass-A/
-├── backend/            # FastAPI Python API Server
+├── src/
 │   ├── app/
-│   │   ├── main.py     # Main application & routing (Auth, Tutor, Exam, Admin)
-│   │   ├── models.py   # Database schema definitions (SQLModel)
-│   │   ├── database.py # Dual SQLite/PostgreSQL connection switcher
-│   │   ├── auth.py     # Local authentication (JWT, bcrypt encryption)
-│   │   ├── rag.py      # PDF/Text parser, chunker, & Gemini RAG integration
-│   │   ├── utils.py    # Exam generator prompts & evaluation
-│   │   └── seed.py     # Database seeder (mock users & curriculum text)
-│   ├── requirements.txt # Python dependencies
-│   └── .env.example    # Configuration options template
-├── frontend/           # Next.js React Application
-│   ├── src/
-│   │   ├── app/
-│   │   │   ├── page.tsx      # Landing page / Auth page (Student/Teacher/Admin login)
-│   │   │   ├── tutor/page.tsx # AI Tutor Chat interface with RAG citations
-│   │   │   ├── exams/page.tsx # Practice Exam generator, taker, & grading
-│   │   │   ├── admin/page.tsx # Curriculum upload dashboard for PDFs/Texts
-│   │   │   ├── globals.css   # Custom CSS Theme (Blue/Teal gradient, glassmorphism)
-│   │   │   └── layout.tsx    # App shell wrapper
-│   │   ├── components/
-│   │   │   └── Sidebar.tsx   # Sidebar navigation and Grade switcher
-│   │   └── context/
-│   │       └── AuthContext.tsx # Authentication state (local user storage + JWT)
-│   └── package.json
+│   │   ├── api/
+│   │   │   ├── admin/upload/route.ts # parses PDFs, chunks, embeds (Gemini), and saves
+│   │   │   ├── exams/generate/route.ts # generates structured exams via Gemini
+│   │   │   ├── exams/submit/route.ts # grades exams and logs attempts
+│   │   │   └── tutor/chat/route.ts   # matching vector chunks + AI responses
+│   │   ├── admin/page.tsx   # curriculum upload dashboard
+│   │   ├── exams/page.tsx   # exam taker and printable assessment
+│   │   ├── tutor/page.tsx   # chat tutor interface with RAG citations
+│   │   ├── globals.css      # custom CSS variables & glassmorphism theme
+│   │   ├── layout.tsx       # app layout wrapper
+│   │   └── page.tsx         # landing page and login forms
+│   ├── components/
+│   │   └── Sidebar.tsx      # navigation and Grade / Language switcher
+│   ├── context/
+│   │   └── AuthContext.tsx  # session listener connecting to Supabase Auth
+│   └── lib/
+│   │   └── supabase.ts      # initializers for client-side and server-side connection
+├── supabase/
+│   ├── schema.sql           # SQL commands to initialize vector extensions and database tables
+│   └── seed.js              # script to populate vectors and default structures
+├── package.json             # NPM dependencies (Next.js, Supabase, Google GenAI)
+├── tsconfig.json            # TypeScript configuration
 └── README.md
 ```
 
@@ -44,81 +46,63 @@ I-Pass-A/
 
 ## Getting Started
 
-### Prerequisites
-- **Python**: version 3.10 or higher.
-- **Node.js**: version 18.0 or higher.
+### Step 1: Configure your Supabase Project
+
+1. Create a project at [supabase.com](https://supabase.com).
+2. Once the project is created, navigate to the **SQL Editor** in your Supabase dashboard.
+3. Paste the contents of `supabase/schema.sql` into the SQL Editor and click **Run**.
+   *This will enable the `vector` extension, create the required tables, establish RLS permissions, and create the `match_chunks` semantic search function.*
 
 ---
 
-### Step 1: Set Up the Backend
+### Step 2: Local Application Setup
 
-1. Navigate to the backend directory:
+1. Clone or navigate to the project directory:
    ```bash
-   cd backend
+   cd "e:\PERSONAL PROJECTS\I-Pass-A"
    ```
 
-2. Create a virtual environment and activate it:
-   ```bash
-   python -m venv venv
-   # On Windows:
-   venv\Scripts\activate
-   # On Mac/Linux:
-   source venv/bin/activate
-   ```
-
-3. Install the dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-4. Create your `.env` configuration file from the template:
-   ```bash
-   copy .env.example .env
-   ```
-
-5. **(Optional)** Open `.env` and add your `GEMINI_API_KEY` (obtained from Google AI Studio).
-   *Note: If no API key is specified, the system will gracefully fall back to **simulated/mock responses**, allowing you to fully test the UI, login, exam generator, and admin panel without api charges.*
-
-6. Initialize and seed the database with mock curriculum content for Grades 1–6 (Afaan Oromo), 7–8 (Afaan Oromo), and 9–12 (English):
-   ```bash
-   python -m app.seed
-   ```
-   *This seeds default testing accounts:*
-   - **Student**: `student@ipassa.com` (Password: `student123`)
-   - **Teacher**: `teacher@ipassa.com` (Password: `teacher123`)
-   - **Admin**: `admin@ipassa.com` (Password: `admin123`)
-
-7. Start the FastAPI development server:
-   ```bash
-   uvicorn app.main:app --reload
-   ```
-   The backend API will run at `http://localhost:8000`.
-
----
-
-### Step 2: Set Up the Frontend
-
-1. Navigate to the frontend directory:
-   ```bash
-   cd ..\frontend
-   ```
-
-2. Install Node packages:
+2. Install Node.js dependencies:
    ```bash
    npm install
    ```
 
-3. Start the Next.js development server:
+3. Create your `.env.local` configuration file:
    ```bash
-   npm run dev
+   copy .env.example .env.local
    ```
-   Open your browser and navigate to `http://localhost:3000`.
+
+4. Open `.env.local` in your editor and input the values found in your Supabase project settings (**Settings > API**):
+   - `NEXT_PUBLIC_SUPABASE_URL`: Your Project URL
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`: Your Anon public API key
+   - `SUPABASE_SERVICE_ROLE_KEY`: Your secret service role key (required for server-side seeding and bypass RLS)
+   - `GEMINI_API_KEY`: Your Google Gemini API key (optional; if omitted, RAG searches and exams use local mock fallbacks)
 
 ---
 
-## Core Features Walkthrough
+### Step 3: Seed the Database
 
-1. **Local Authentication**: Register as a Student (Grades 1–12) or login with the seeded accounts. Role-based access protects the admin dashboard from students.
-2. **AI Tutor**: Select a grade. Grade 9–12 studies in English (English, Biology, Chemistry, Physics). Grade 1–8 studies in Afaan Oromo (Afaan Oromo, Saayinsii, Hawaasummaa). Type questions and receive step-by-step answers with document source links. Try asking out-of-scope questions (like coding help) to test the out-of-scope redirection filter.
-3. **Practice Exam Prep**: Generate tests dynamically based on selected subjects and topics. Score answers immediately, receive correct answer explanations, or print/export the test sheet as a clean exam document.
-4. **Curriculum Administration**: Upload school PDF/Textbooks. Chunks are automatically processed, embedded, and added to the RAG database instantly.
+Seed your Supabase PostgreSQL database with mock curriculum chunks for English (Grades 9–12) and Afaan Oromo (Grades 1–8):
+```bash
+node supabase/seed.js
+```
+*Note: Ensure your `.env.local` (specifically `SUPABASE_SERVICE_ROLE_KEY`) is configured correctly before running.*
+
+---
+
+### Step 4: Run the Development Server
+
+Start the local server:
+```bash
+npm run dev
+```
+Open your browser and navigate to `http://localhost:3000`.
+
+---
+
+## Features Walkthrough
+
+1. **Authentication (Supabase Auth)**: Register directly from the Home Screen or sign up as a Student. Roles and grade configurations sync automatically to your Supabase `profiles` table.
+2. **AI Tutor (RAG)**: Select Grade 1–8 to ask questions in Afaan Oromo (Afaan Oromo, Saayinsii, Hawaasummaa), or select Grade 9–12 to study in English. The RAG pipeline retrieves relevant snippets and references the source files under the bubbles.
+3. **Practice Exam Prep**: Create exams dynamically on any topic. Complete multiple-choice and short-answers, submit for instant grading, and review curriculum explanations. Click **Print / Export** to get a clean formatted exam sheet.
+4. **Admin Dashboard**: Upload new textbooks. Text is parsed, chunked, embedded using Gemini, and saved in the vector database instantly.

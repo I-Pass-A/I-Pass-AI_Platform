@@ -4,9 +4,10 @@ import React, { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { GraduationCap, Mail, Lock, User as UserIcon, BookOpen } from "lucide-react";
+import { supabase } from "@/lib/supabase";
 
 export default function Home() {
-  const { user, login, loading } = useAuth();
+  const { user, loading } = useAuth();
   const router = useRouter();
   const [isLogin, setIsLogin] = useState(true);
   
@@ -61,47 +62,40 @@ export default function Home() {
     setSubmitting(true);
 
     try {
-      const endpoint = isLogin ? "/api/auth/login" : "/api/auth/register";
-      
-      let body: any;
-      let headers: any = { "Content-Type": "application/json" };
-
       if (isLogin) {
-        // OAuth2 password form payload format: urlencoded
-        const formData = new URLSearchParams();
-        formData.append("username", email);
-        formData.append("password", password);
-        body = formData.toString();
-        headers["Content-Type"] = "application/x-www-form-urlencoded";
+        // Sign in via Supabase Auth
+        const { error: loginErr } = await supabase.auth.signInWithPassword({
+          email,
+          password
+        });
+        if (loginErr) throw loginErr;
       } else {
-        body = JSON.stringify({
-          name,
+        // Sign up via Supabase Auth with metadata
+        const { error: signUpErr } = await supabase.auth.signUp({
           email,
           password,
-          role,
-          grade: role === "student" ? grade : null,
-          language: role === "student" && parseInt(grade) <= 8 ? "Afaan Oromo" : "English"
+          options: {
+            data: {
+              name,
+              role,
+              grade: role === "student" ? grade : null,
+              language: role === "student" && parseInt(grade) <= 8 ? "Afaan Oromo" : "English"
+            }
+          }
         });
+        if (signUpErr) throw signUpErr;
+        
+        setIsLogin(true);
+        setError("Account created successfully! Please sign in using your credentials.");
+        setName("");
+        setPassword("");
+        setSubmitting(false);
+        return;
       }
-
-      // Backend runs on http://localhost:8000
-      const response = await fetch(`http://localhost:8000${endpoint}`, {
-        method: "POST",
-        headers,
-        body
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.detail || "Authentication failed");
-      }
-
-      // Save token and user info
-      login(data.access_token, data.user);
+      
       router.push("/tutor");
     } catch (err: any) {
-      setError(err.message || "Something went wrong. Please check your backend is running.");
+      setError(err.message || "Authentication failed. Make sure your email and password are correct.");
     } finally {
       setSubmitting(false);
     }
@@ -188,9 +182,9 @@ export default function Home() {
 
           {error && (
             <div style={{
-              background: "rgba(239, 68, 68, 0.1)",
-              border: "1px solid rgba(239, 68, 68, 0.2)",
-              color: "var(--danger)",
+              background: error.includes("successfully") ? "rgba(34, 197, 94, 0.1)" : "rgba(239, 68, 68, 0.1)",
+              border: error.includes("successfully") ? "1px solid rgba(34, 197, 94, 0.2)" : "1px solid rgba(239, 68, 68, 0.2)",
+              color: error.includes("successfully") ? "var(--success)" : "var(--danger)",
               padding: "0.75rem 1rem",
               borderRadius: "var(--radius-sm)",
               fontSize: "0.85rem",

@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import Sidebar from "@/components/Sidebar";
 import { useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabase";
 import { Upload, Trash2, Database, FileText, CheckCircle2, ShieldAlert } from "lucide-react";
 
 interface ChunkInfo {
@@ -19,7 +20,7 @@ interface ChunkInfo {
 }
 
 export default function AdminPage() {
-  const { user, token, loading } = useAuth();
+  const { user, loading } = useAuth();
   const router = useRouter();
 
   // File Upload Form State
@@ -44,10 +45,10 @@ export default function AdminPage() {
   }, [user, loading, router]);
 
   useEffect(() => {
-    if (token && user && (user.role === "admin" || user.role === "teacher")) {
+    if (user && (user.role === "admin" || user.role === "teacher")) {
       fetchChunks();
     }
-  }, [token, user]);
+  }, [user]);
 
   if (loading || !user) return null;
   if (user.role !== "admin" && user.role !== "teacher") return null;
@@ -55,13 +56,26 @@ export default function AdminPage() {
   const fetchChunks = async () => {
     setFetchingChunks(true);
     try {
-      const response = await fetch("http://localhost:8000/api/admin/chunks", {
-        headers: { "Authorization": `Bearer ${token}` }
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setChunks(data);
-      }
+      const { data, error } = await supabase
+        .from("curriculum_chunks")
+        .select("id, subject, topic, grade, language, source_document, content, version, created_at")
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+
+      const formatted: ChunkInfo[] = (data || []).map((c: any) => ({
+        id: c.id,
+        subject: c.subject,
+        topic: c.topic,
+        grade: c.grade,
+        language: c.language,
+        source_document: c.source_document,
+        content_preview: c.content.slice(0, 100) + "...",
+        version: c.version,
+        created_at: c.created_at
+      }));
+
+      setChunks(formatted);
     } catch (e) {
       console.error(e);
     } finally {
@@ -91,11 +105,8 @@ export default function AdminPage() {
     formData.append("language", language);
 
     try {
-      const response = await fetch("http://localhost:8000/api/admin/upload", {
+      const response = await fetch("/api/admin/upload", {
         method: "POST",
-        headers: {
-          "Authorization": `Bearer ${token}`
-        },
         body: formData
       });
 
@@ -106,7 +117,7 @@ export default function AdminPage() {
         setFile(null);
         setSubject("");
         setTopic("");
-        fetchChunks(); // Refresh chunks
+        fetchChunks(); // Refresh chunks list
       } else {
         throw new Error(data.detail || "Failed to upload document");
       }
@@ -125,13 +136,14 @@ export default function AdminPage() {
     if (!confirm("Are you sure you want to retract this curriculum chunk? It will immediately remove the source from AI Tutor grounding.")) return;
 
     try {
-      const response = await fetch(`http://localhost:8000/api/admin/chunks/${chunkId}`, {
-        method: "DELETE",
-        headers: { "Authorization": `Bearer ${token}` }
-      });
-      if (response.ok) {
-        setChunks(prev => prev.filter(c => c.id !== chunkId));
-      }
+      const { error } = await supabase
+        .from("curriculum_chunks")
+        .delete()
+        .eq("id", chunkId);
+
+      if (error) throw error;
+      
+      setChunks(prev => prev.filter(c => c.id !== chunkId));
     } catch (e) {
       console.error(e);
     }
@@ -365,7 +377,7 @@ export default function AdminPage() {
                 border: "1px solid rgba(245, 158, 11, 0.15)",
                 borderRadius: "var(--radius-sm)",
                 color: "var(--warning)",
-                fontSize: "0.8rem",
+                fontSize: "0.85rem",
                 display: "flex",
                 alignItems: "center",
                 gap: "0.5rem"

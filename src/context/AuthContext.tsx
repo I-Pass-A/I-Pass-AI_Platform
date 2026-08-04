@@ -1,0 +1,138 @@
+"use client";
+
+import React, { createContext, useContext, useState, useEffect } from "react";
+import { supabase } from "@/lib/supabase";
+import { Session, User as SupabaseUser } from "@supabase/supabase-js";
+
+interface Profile {
+  id: string;
+  name: string;
+  role: string; // student, teacher, admin
+  grade: string | null;
+  language: string;
+}
+
+interface AuthContextType {
+  user: Profile | null;
+  session: Session | null;
+  loading: boolean;
+  logout: () => Promise<void>;
+  updateUserLanguage: (lang: string) => Promise<void>;
+  updateUserGrade: (grade: string) => Promise<void>;
+  refreshProfile: () => Promise<void>;
+}
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const [user, setUser] = useState<Profile | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const fetchProfile = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", userId)
+        .single();
+
+      if (error) {
+        throw error;
+      }
+      setUser(data);
+    } catch (e) {
+      console.error("Error loading user profile:", e);
+      setUser(null);
+    }
+  };
+
+  useEffect(() => {
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      if (session?.user) {
+        fetchProfile(session.user.id).finally(() => setLoading(false));
+      } else {
+        setLoading(false);
+      }
+    });
+
+    // Listen to session changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      setSession(session);
+      if (session?.user) {
+        setLoading(true);
+        await fetchProfile(session.user.id);
+        setLoading(false);
+      } else {
+        setUser(null);
+        setLoading(false);
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  const logout = async () => {
+    await supabase.auth.signOut();
+    setUser(null);
+    setSession(null);
+  };
+
+  const updateUserLanguage = async (lang: string) => {
+    if (user && session?.user) {
+      const { error } = await supabase
+        .from("profiles")
+        .update({ language: lang })
+        .eq("id", session.user.id);
+
+      if (!error) {
+        setUser(prev => prev ? { ...prev, language: lang } : null);
+      }
+    }
+  };
+
+  const updateUserGrade = async (grade: string) => {
+    if (user && session?.user) {
+      const { error } = await supabase
+        .from("profiles")
+        .update({ grade })
+        .eq("id", session.user.id);
+
+      if (!error) {
+        setUser(prev => prev ? { ...prev, grade } : null);
+      }
+    }
+  };
+
+  const refreshProfile = async () => {
+    if (session?.user) {
+      await fetchProfile(session.user.id);
+    }
+  };
+
+  return (
+    <AuthContext.Provider value={{ 
+      user, 
+      session, 
+      loading, 
+      logout, 
+      updateUserLanguage, 
+      updateUserGrade,
+      refreshProfile
+    }}>
+      {children}
+    </AuthContext.Provider>
+  );
+}
+
+export function useAuth() {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error("useAuth must be used within an AuthProvider");
+  }
+  return context;
+}

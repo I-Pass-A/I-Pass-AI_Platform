@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import Sidebar from "@/components/Sidebar";
 import { useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabase";
 import { 
   Award, 
   FileText, 
@@ -45,7 +46,7 @@ interface AttemptResult {
 }
 
 export default function ExamsPage() {
-  const { user, token, loading } = useAuth();
+  const { user, loading } = useAuth();
   const router = useRouter();
 
   const englishSubjects = ["English", "Biology", "Chemistry", "Physics", "Maths"];
@@ -58,7 +59,7 @@ export default function ExamsPage() {
   const [savedExams, setSavedExams] = useState<SavedExam[]>([]);
   
   const [activeExam, setActiveExam] = useState<{ id: number; subject: string; topic: string; questions: Question[] } | null>(null);
-  const [answers, setAnswers] = useState<Dict<number, string>>({});
+  const [answers, setAnswers] = useState<Record<number, string>>({});
   
   const [assessment, setAssessment] = useState<AttemptResult | null>(null);
   
@@ -74,25 +75,38 @@ export default function ExamsPage() {
   }, [user, loading, router]);
 
   useEffect(() => {
-    if (token) {
+    if (user) {
       fetchSavedExams();
     }
-  }, [token]);
+  }, [user?.grade]);
 
   if (loading || !user) return null;
 
   const subjects = user.language === "Afaan Oromo" ? oromoSubjects : englishSubjects;
 
   const fetchSavedExams = async () => {
+    if (!user) return;
     setFetchingSaved(true);
     try {
-      const response = await fetch(`http://localhost:8000/api/exams/saved?grade=${user.grade}`, {
-        headers: { "Authorization": `Bearer ${token}` }
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setSavedExams(data);
-      }
+      const { data, error } = await supabase
+        .from("exams")
+        .select("id, subject, topic, difficulty, grade, questions, created_at")
+        .eq("grade", user.grade)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+
+      const formatted = (data || []).map((ex: any) => ({
+        id: ex.id,
+        subject: ex.subject,
+        topic: ex.topic,
+        difficulty: ex.difficulty,
+        grade: ex.grade,
+        question_count: Array.isArray(ex.questions) ? ex.questions.length : 0,
+        created_at: ex.created_at
+      }));
+
+      setSavedExams(formatted);
     } catch (e) {
       console.error(e);
     } finally {
@@ -109,12 +123,9 @@ export default function ExamsPage() {
     setAnswers({});
 
     try {
-      const response = await fetch("http://localhost:8000/api/exams/generate", {
+      const response = await fetch("/api/exams/generate", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           subject,
           topic,
@@ -141,14 +152,21 @@ export default function ExamsPage() {
     setAnswers({});
     
     try {
-      const response = await fetch(`http://localhost:8000/api/exams/${examId}`, {
-        headers: { "Authorization": `Bearer ${token}` }
+      const { data, error } = await supabase
+        .from("exams")
+        .select("id, subject, topic, questions")
+        .eq("id", examId)
+        .single();
+
+      if (error) throw error;
+
+      setActiveExam({
+        id: data.id,
+        subject: data.subject,
+        topic: data.topic,
+        questions: data.questions as Question[]
       });
-      if (response.ok) {
-        const data = await response.json();
-        setActiveExam(data);
-        setViewingSaved(false);
-      }
+      setViewingSaved(false);
     } catch (e) {
       console.error(e);
     }
@@ -180,15 +198,13 @@ export default function ExamsPage() {
     }));
 
     try {
-      const response = await fetch("http://localhost:8000/api/exams/submit", {
+      const response = await fetch("/api/exams/submit", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           exam_id: activeExam.id,
-          answers: formattedAnswers
+          answers: formattedAnswers,
+          student_id: user.id  // Log the attempt under current student profile ID
         })
       });
 

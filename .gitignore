@@ -1,24 +1,10 @@
-# Next.js build and dependencies
-frontend/node_modules/
-frontend/.next/
-frontend/out/
-frontend/build/
-frontend/.env*.local
-
-# Python virtual environment and cache
-backend/venv/
-backend/__pycache__/
-backend/app/__pycache__/
-*.pyc
-*.pyo
-*.pyd
-.pytest_cache/
-
-# Databases and local configuration
-backend/ipassa.db
-backend/.env
+node_modules/
+.next/
+out/
+build/
+.env*.local
 .env
-
-# OS Files
+*.pyc
+__pycache__/
 .DS_Store
 Thumbs.db
