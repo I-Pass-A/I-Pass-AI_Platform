@@ -53,6 +53,7 @@ create table public.curriculum_chunks (
   content text not null,
   embedding vector(1536),
   version int not null default 1,
+  uploaded_by text default 'System',
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 

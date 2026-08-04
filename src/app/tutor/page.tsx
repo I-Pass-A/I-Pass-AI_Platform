@@ -10,7 +10,6 @@ import {
   Send, 
   BookOpen, 
   AlertTriangle, 
-  User, 
   Bot, 
   PlusCircle, 
   History 
@@ -74,6 +73,32 @@ export default function TutorPage() {
 
   // Determine subject list based on language
   const subjects = user.language === "Afaan Oromo" ? oromoSubjects : englishSubjects;
+  const isAO = user.language === "Afaan Oromo";
+
+  // Dynamic Translations (No mixed bilingual labels)
+  const t = {
+    activeSessions: isAO ? "Haasawa Ol-kaayame" : "Active Sessions",
+    newChat: isAO ? "Haasawa Haaraa Eegali" : "Start New Chat",
+    loading: isAO ? "Fidaa jira..." : "Loading...",
+    noActiveSessions: isAO ? "Haasawa ol-kaayame hin jiru." : "No active sessions.",
+    selectSession: isAO ? "Mata-duree Haasawa filadhu ykn jalqabi." : "Select or start a session on the left to begin.",
+    curriculumBanner: isAO ? "Seera Caasluga Kuusaa (RAG)" : "Curriculum Grounded (RAG)",
+    noActiveSessionHeader: isAO ? "Haasawa Eegaluu" : "No Active Session",
+    noActiveSessionDesc: isAO 
+      ? `Gosa barnootaa bitaa irraa filachuudhaan haasawa haaraa kutaa ${user.grade} jalqabi.`
+      : `Select a subject on the left to start a new chat session grounded in your Grade ${user.grade} curriculum.`,
+    newChatHeader: isAO ? `Tutor ${selectedSubject} Haaraa` : `New ${selectedSubject} Chat`,
+    newChatDesc: isAO
+      ? "Gaaffii kee barreessi (fkn, yaad-rimee ibsi, caasluga qoradhu) gargaarsa argachuuf!"
+      : "Type your question below (e.g., explain a topic, clarify tenses, or ask grammar rules) to get step-by-step guidance!",
+    placeholderInput: isAO ? "Gaaffii kee barreessi..." : "Ask your AI Tutor a question...",
+    outOfScope: isAO ? "Yaada Dabalataa (Curriculum Ala)" : "Out of Curriculum Scope",
+    similarityText: isAO ? "Wal-fakkeenya" : "Similarity",
+    tutorTitleSuffix: isAO ? "Tutor (Kutaa" : "Tutor (Grade",
+    errorConnect: isAO
+      ? "Gargaarsa AI argachuu hin dandeenye. Maaloo api server Next.js oofuu kee mirkaneessi."
+      : "Error: Could not connect to AI Tutor. Please check that Next.js Server API is active."
+  };
 
   const fetchSessions = async () => {
     if (!user) return;
@@ -99,23 +124,20 @@ export default function TutorPage() {
         const sortedMsgs = [...s.tutor_messages].sort((a: any, b: any) => 
           new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
         );
+        const lastMsg = sortedMsgs[0]?.content || (isAO ? "Haasawa jalqabi..." : "Start chatting...");
+        
         return {
           id: s.id,
           subject: s.subject,
           started_at: s.started_at,
-          last_message: sortedMsgs.length > 0 ? sortedMsgs[0].content.slice(0, 60) + "..." : "No messages"
+          last_message: lastMsg
         };
       });
 
-      // Sort sessions by started_at desc
+      // Sort sessions by date descending
       formattedSessions.sort((a, b) => new Date(b.started_at).getTime() - new Date(a.started_at).getTime());
       
       setSessions(formattedSessions);
-      
-      // Load first session automatically if none active
-      if (formattedSessions.length > 0 && !activeSessionId) {
-        loadSession(formattedSessions[0].id);
-      }
     } catch (e) {
       console.error(e);
     } finally {
@@ -123,33 +145,34 @@ export default function TutorPage() {
     }
   };
 
-  const loadSession = async (id: number) => {
-    setActiveSessionId(id);
+  const loadSession = async (sessionId: number) => {
     setFetchingMessages(true);
+    setActiveSessionId(sessionId);
+    
+    // Find subject for this session
+    const matched = sessions.find(s => s.id === sessionId);
+    if (matched) {
+      setSelectedSubject(matched.subject);
+    }
+
     try {
       const { data, error } = await supabase
         .from("tutor_messages")
-        .select("id, sender, content, timestamp")
-        .eq("session_id", id)
+        .select("sender, content, timestamp, sources, out_of_scope")
+        .eq("session_id", sessionId)
         .order("timestamp", { ascending: true });
-        
+
       if (error) throw error;
-      
-      setMessages(data || []);
-      
-      // Load subject name from sessions list
-      const activeSess = sessions.find(s => s.id === id);
-      if (activeSess) {
-        setSelectedSubject(activeSess.subject);
-      } else {
-        // Query database directly if not in state
-        const { data: sessData } = await supabase
-          .from("tutor_sessions")
-          .select("subject")
-          .eq("id", id)
-          .single();
-        if (sessData) setSelectedSubject(sessData.subject);
-      }
+
+      const formattedMsgs: Message[] = (data || []).map((m: any) => ({
+        sender: m.sender,
+        content: m.content,
+        timestamp: m.timestamp,
+        sources: m.sources || [],
+        out_of_scope: m.out_of_scope
+      }));
+
+      setMessages(formattedMsgs);
     } catch (e) {
       console.error(e);
     } finally {
@@ -157,24 +180,25 @@ export default function TutorPage() {
     }
   };
 
-  const startNewSession = async (subject: string) => {
-    if (!subject || !user) return;
+  const startNewSession = async (subjectName: string) => {
+    if (!user) return;
+    setSelectedSubject(subjectName);
+    setMessages([]);
+    
     try {
       const { data, error } = await supabase
         .from("tutor_sessions")
-        .insert({ 
-          subject, 
-          user_id: user.id 
+        .insert({
+          user_id: user.id,
+          subject: subjectName
         })
         .select()
         .single();
-        
+
       if (error) throw error;
       
       setActiveSessionId(data.id);
-      setMessages([]);
-      setSelectedSubject(subject);
-      await fetchSessions(); // Refresh sessions list
+      fetchSessions(); // Refresh sidebar list
     } catch (e) {
       console.error(e);
     }
@@ -184,14 +208,14 @@ export default function TutorPage() {
     e.preventDefault();
     if (!inputText.trim() || !activeSessionId || sending) return;
 
-    const queryText = inputText;
+    const studentText = inputText.trim();
     setInputText("");
     setSending(true);
 
-    // Append student message locally for instant response feel
+    // Append student message instantly to UI
     const studentMsg: Message = {
       sender: "student",
-      content: queryText,
+      content: studentText,
       timestamp: new Date().toISOString()
     };
     setMessages(prev => [...prev, studentMsg]);
@@ -202,7 +226,7 @@ export default function TutorPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           session_id: activeSessionId,
-          query: queryText,
+          query: studentText,
           grade: user.grade
         })
       });
@@ -217,14 +241,14 @@ export default function TutorPage() {
           out_of_scope: data.out_of_scope
         };
         setMessages(prev => [...prev, tutorMsg]);
-        fetchSessions(); // Refresh session metadata text
+        fetchSessions(); // Refresh session last_message text
       } else {
         throw new Error("Failed to generate response");
       }
     } catch (err: any) {
       const errorMsg: Message = {
         sender: "tutor",
-        content: `Error: Could not connect to AI Tutor. Please check that Next.js Server API is active.`,
+        content: t.errorConnect,
         timestamp: new Date().toISOString(),
         out_of_scope: true
       };
@@ -251,14 +275,14 @@ export default function TutorPage() {
         }}>
           <div style={{ padding: "1.5rem", borderBottom: "1px solid var(--glass-border)" }}>
             <h3 style={{ fontSize: "1rem", fontWeight: 600, display: "flex", alignItems: "center", gap: "0.5rem" }}>
-              <History size={16} /> Sessions / Barnoota
+              <History size={16} /> {t.activeSessions}
             </h3>
           </div>
           
           {/* New Session Options */}
           <div style={{ padding: "1rem", borderBottom: "1px solid var(--glass-border)" }}>
             <span style={{ fontSize: "0.75rem", color: "var(--text-secondary)", textTransform: "uppercase", display: "block", marginBottom: "0.5rem" }}>
-              Start New / Haaraa Eegali
+              {t.newChat}
             </span>
             <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
               {subjects.map((sub) => (
@@ -284,9 +308,9 @@ export default function TutorPage() {
           {/* Session List */}
           <div style={{ flex: 1, overflowY: "auto", padding: "0.75rem" }}>
             {fetchingSessions ? (
-              <p style={{ textAlign: "center", fontSize: "0.8rem", color: "var(--text-muted)", marginTop: "1rem" }}>Loading...</p>
+              <p style={{ textAlign: "center", fontSize: "0.8rem", color: "var(--text-muted)", marginTop: "1rem" }}>{t.loading}</p>
             ) : sessions.length === 0 ? (
-              <p style={{ textAlign: "center", fontSize: "0.8rem", color: "var(--text-muted)", marginTop: "1rem" }}>No active sessions.</p>
+              <p style={{ textAlign: "center", fontSize: "0.8rem", color: "var(--text-muted)", marginTop: "1rem" }}>{t.noActiveSessions}</p>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
                 {sessions.map((s) => (
@@ -348,11 +372,11 @@ export default function TutorPage() {
                 <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
                   <MessageSquare size={20} style={{ color: "var(--primary)" }} />
                   <h1 style={{ fontSize: "1.2rem", fontWeight: 700 }}>
-                    {selectedSubject} Tutor (Grade {user.grade})
+                    {selectedSubject} {t.tutorTitleSuffix} {user.grade})
                   </h1>
                 </div>
               ) : (
-                <span style={{ color: "var(--text-secondary)", fontSize: "0.95rem" }}>Select or start a session on the left to begin.</span>
+                <span style={{ color: "var(--text-secondary)", fontSize: "0.95rem" }}>{t.selectSession}</span>
               )}
             </div>
 
@@ -365,7 +389,7 @@ export default function TutorPage() {
               fontWeight: 600,
               border: "1px solid rgba(20, 184, 166, 0.2)"
             }}>
-              Curriculum Grounded (RAG)
+              {t.curriculumBanner}
             </div>
           </div>
 
@@ -391,8 +415,8 @@ export default function TutorPage() {
                 margin: "0 auto"
               }}>
                 <Bot size={48} style={{ color: "var(--text-muted)", marginBottom: "1rem" }} />
-                <h3 style={{ marginBottom: "0.5rem" }}>No Active Session</h3>
-                <p style={{ fontSize: "0.9rem" }}>Select a subject on the left to start a new chat session grounded in your Grade {user.grade} curriculum.</p>
+                <h3 style={{ marginBottom: "0.5rem" }}>{t.noActiveSessionHeader}</h3>
+                <p style={{ fontSize: "0.9rem" }}>{t.noActiveSessionDesc}</p>
               </div>
             ) : messages.length === 0 && !fetchingMessages ? (
               <div style={{
@@ -407,8 +431,8 @@ export default function TutorPage() {
                 margin: "0 auto"
               }}>
                 <MessageSquare size={32} style={{ color: "var(--primary)", marginBottom: "1rem" }} />
-                <h3 style={{ marginBottom: "0.5rem" }}>New {selectedSubject} Chat</h3>
-                <p style={{ fontSize: "0.9rem" }}>Type your question below (e.g., explain a topic, clarify tenses, or ask grammar rules) to get step-by-step guidance!</p>
+                <h3 style={{ marginBottom: "0.5rem" }}>{t.newChatHeader}</h3>
+                <p style={{ fontSize: "0.9rem" }}>{t.newChatDesc}</p>
               </div>
             ) : fetchingMessages ? (
               <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -429,54 +453,23 @@ export default function TutorPage() {
                 {messages.map((msg, index) => {
                   const isStudent = msg.sender === "student";
                   return (
-                    <div
-                      key={index}
+                    <div 
+                      key={index} 
                       style={{
                         display: "flex",
-                        alignSelf: isStudent ? "flex-end" : "flex-start",
                         flexDirection: "column",
-                        alignItems: isStudent ? "flex-end" : "flex-start",
-                        maxWidth: "75%",
-                        animation: "fadeIn 0.3s ease forwards"
+                        alignSelf: isStudent ? "flex-end" : "flex-start",
+                        maxWidth: "70%",
+                        gap: "0.25rem"
                       }}
                     >
-                      {/* Sender Tag */}
-                      <div style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "0.35rem",
-                        fontSize: "0.75rem",
-                        color: "var(--text-secondary)",
-                        marginBottom: "0.25rem"
-                      }}>
-                        {isStudent ? (
-                          <>
-                            <span>You</span>
-                            <User size={12} />
-                          </>
-                        ) : (
-                          <>
-                            <Bot size={12} style={{ color: "var(--primary)" }} />
-                            <span>AI Tutor</span>
-                          </>
-                        )}
-                      </div>
-
-                      {/* Bubble */}
-                      <div
-                        className="glass-panel"
+                      <div 
                         style={{
+                          background: isStudent ? "var(--glass-active)" : "rgba(255, 255, 255, 0.03)",
+                          border: isStudent ? "1px solid rgba(14, 165, 233, 0.3)" : "1px solid var(--glass-border)",
                           padding: "1rem 1.25rem",
-                          borderRadius: isStudent 
-                            ? "16px 16px 2px 16px" 
-                            : "16px 16px 16px 2px",
-                          background: isStudent 
-                            ? "linear-gradient(135deg, rgba(14, 165, 233, 0.15) 0%, rgba(14, 165, 233, 0.05) 100%)"
-                            : "rgba(255, 255, 255, 0.03)",
-                          borderColor: isStudent
-                            ? "rgba(14, 165, 233, 0.25)"
-                            : "var(--glass-border)",
-                          whiteSpace: "pre-line"
+                          borderRadius: isStudent ? "18px 18px 0px 18px" : "18px 18px 18px 0px",
+                          position: "relative"
                         }}
                       >
                         {/* Out of Scope Banner */}
@@ -494,7 +487,7 @@ export default function TutorPage() {
                             marginBottom: "0.75rem"
                           }}>
                             <AlertTriangle size={16} />
-                            <span>Out of Curriculum Scope</span>
+                            <span>{t.outOfScope}</span>
                           </div>
                         )}
                         
@@ -527,7 +520,7 @@ export default function TutorPage() {
                               }}
                             >
                               <BookOpen size={10} />
-                              <span>{src.source} (Similarity: {Math.round(src.similarity * 100)}%)</span>
+                              <span>{src.source} ({t.similarityText}: {Math.round(src.similarity * 100)}%)</span>
                             </div>
                           ))}
                         </div>
@@ -567,7 +560,7 @@ export default function TutorPage() {
                 <input
                   type="text"
                   className="form-input"
-                  placeholder={user.language === "Afaan Oromo" ? "Gaaffii kee barreessi..." : "Ask your AI Tutor a question..."}
+                  placeholder={t.placeholderInput}
                   required
                   value={inputText}
                   onChange={(e) => setInputText(e.target.value)}

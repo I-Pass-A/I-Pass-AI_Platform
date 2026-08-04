@@ -16,6 +16,7 @@ interface ChunkInfo {
   source_document: string;
   content_preview: string;
   version: number;
+  uploaded_by?: string;
   created_at: string;
 }
 
@@ -53,12 +54,52 @@ export default function AdminPage() {
   if (loading || !user) return null;
   if (user.role !== "admin" && user.role !== "teacher") return null;
 
+  const isAO = user.language === "Afaan Oromo";
+
+  // Dynamic Translations (No mixed bilingual slashes)
+  const t = {
+    headerTitle: isAO ? "Bulchiinsa Barnootaa" : "Curriculum Administration",
+    headerDesc: isAO 
+      ? "PDF ykn kitaaba barumsaa ol-kaasi, gosa barnootaafi kutaadhaan mallatteessi, haala grounding RAG bulchi."
+      : "Upload PDFs/Textbooks, tag them by grade band/subject, and manage vector grounding chunks.",
+    uploadHeading: isAO ? "Material Ol-kaasi" : "Upload Material",
+    labelFile: isAO ? "Faayilii PDF ykn TXT filadhu" : "Select PDF or Text File",
+    labelSubject: isAO ? "Gosa Barnootaa" : "Subject",
+    placeholderSubject: isAO ? "fkn. Saayinsii, Afaan Oromo" : "e.g. Biology, English",
+    labelTopic: isAO ? "Mata-duree / Boqonnaa" : "Topic / Unit",
+    placeholderTopic: isAO ? "fkn. Boqonnaa 2, Caasluga" : "e.g. Cell Structure, Tenses",
+    labelGrade: isAO ? "Kutaa Barnootaa" : "Grade Band",
+    optGrade1: isAO ? "Kutaa 1-6 (Afaan Oromoo)" : "Grades 1-6 (Afaan Oromo)",
+    optGrade2: isAO ? "Kutaa 7-8 (Afaan Oromoo)" : "Grades 7-8 (Afaan Oromo)",
+    optGrade3: isAO ? "Kutaa 9-12 (Ingiliffa)" : "Grades 9-12 (English)",
+    labelLanguage: isAO ? "Afaan Kuusaa (RAG)" : "Grounding Language",
+    btnSubmit: isAO ? "Vector DBtti Kuusi" : "Process & Save to Vector DB",
+    dbHeading: isAO ? "Haala Vector Database" : "Vector Database Status",
+    chunksCount: isAO ? "Kutaa Kuusaa" : "Chunks",
+    loadingDB: isAO ? "Haala database fiduu jira..." : "Loading database status...",
+    emptyDB: isAO 
+      ? "Vector database duwwaa dha. Maaloo faayilii ol-kaasi ykn database seed godhi." 
+      : "Vector database is empty. Seed local mock chunks or upload a document to get started.",
+    warningTeacher: isAO 
+      ? "Barsiisaa taate seenu keessaniif, faayilii haquun bulchaa qofaaf eeyyamama." 
+      : "You are logged in as a Teacher. Document deletion is restricted to Administrators.",
+    alertAdminOnly: isAO ? "Bulchaa qofatu faayilii haquu danda'a." : "Only system administrators can delete/retract curriculum chunks.",
+    confirmRetract: isAO 
+      ? "Faayilii kana haquu akka barbaaddu mirkaneessi? Kun grounding AI Tutor keessaa ni baha." 
+      : "Are you sure you want to retract this curriculum chunk? It will immediately remove the source from AI Tutor grounding.",
+    uploadingBtn: isAO ? "Ol-kaasaa jira..." : "Uploading & Chunking...",
+    sourceLabel: isAO ? "Madda" : "Source",
+    uploadedByLabel: isAO ? "Uploader" : "Uploaded By",
+    successMsg: isAO ? "Kitaabni barumsaa ol-kaafamee milkiin kuusameera!" : "Curriculum material uploaded and processed successfully!",
+    errorMsg: isAO ? "Faayilii ol-kaasuun hin danda'amne. Maaloo sirrii ta'uu isaa mirkaneessi." : "Failed to parse and upload document. Ensure file format is valid."
+  };
+
   const fetchChunks = async () => {
     setFetchingChunks(true);
     try {
       const { data, error } = await supabase
         .from("curriculum_chunks")
-        .select("id, subject, topic, grade, language, source_document, content, version, created_at")
+        .select("id, subject, topic, grade, language, source_document, content, version, uploaded_by, created_at")
         .order("created_at", { ascending: false });
 
       if (error) throw error;
@@ -72,6 +113,7 @@ export default function AdminPage() {
         source_document: c.source_document,
         content_preview: c.content.slice(0, 100) + "...",
         version: c.version,
+        uploaded_by: c.uploaded_by || "System Seed",
         created_at: c.created_at
       }));
 
@@ -103,6 +145,7 @@ export default function AdminPage() {
     formData.append("topic", topic);
     formData.append("grade", gradeBand);
     formData.append("language", language);
+    formData.append("uploaded_by", `${user.name} (${user.role === "admin" ? "Admin" : "Teacher"})`);
 
     try {
       const response = await fetch("/api/admin/upload", {
@@ -113,16 +156,16 @@ export default function AdminPage() {
       const data = await response.json();
 
       if (response.ok) {
-        setUploadSuccess(data.detail || "Curriculum material uploaded and processed successfully!");
+        setUploadSuccess(data.detail || t.successMsg);
         setFile(null);
         setSubject("");
         setTopic("");
         fetchChunks(); // Refresh chunks list
       } else {
-        throw new Error(data.detail || "Failed to upload document");
+        throw new Error(data.detail || t.errorMsg);
       }
     } catch (err: any) {
-      setUploadError(err.message || "Failed to parse and upload document. Ensure file format is valid.");
+      setUploadError(err.message || t.errorMsg);
     } finally {
       setUploading(false);
     }
@@ -130,10 +173,10 @@ export default function AdminPage() {
 
   const handleDeleteChunk = async (chunkId: number) => {
     if (user.role !== "admin") {
-      alert("Only system administrators can delete/retract curriculum chunks.");
+      alert(t.alertAdminOnly);
       return;
     }
-    if (!confirm("Are you sure you want to retract this curriculum chunk? It will immediately remove the source from AI Tutor grounding.")) return;
+    if (!confirm(t.confirmRetract)) return;
 
     try {
       const { error } = await supabase
@@ -149,7 +192,6 @@ export default function AdminPage() {
     }
   };
 
-  // Automatically update language when grade band changes
   const handleGradeBandChange = (val: string) => {
     setGradeBand(val);
     if (val === "1-6" || val === "7-8") {
@@ -165,14 +207,17 @@ export default function AdminPage() {
       
       <main className="main-content" style={{ display: "flex", flexDirection: "column", gap: "2rem" }}>
         
-        {/* Top Navbar */}
-        <div>
-          <h1 style={{ fontSize: "2rem", fontWeight: 700, marginBottom: "0.25rem" }}>
-            Curriculum Administration
-          </h1>
-          <p style={{ color: "var(--text-secondary)" }}>
-            Upload PDFs/Text books, tag them by grade band/subject, and manage RAG grounding chunks.
-          </p>
+        {/* Page Header */}
+        <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+          <img src="/logo.png" alt="I-Pass-A Logo" style={{ width: "56px", height: "56px", borderRadius: "10px", objectFit: "cover" }} />
+          <div>
+            <h1 style={{ fontSize: "2rem", fontWeight: 700, marginBottom: "0.25rem" }}>
+              {t.headerTitle}
+            </h1>
+            <p style={{ color: "var(--text-secondary)" }}>
+              {t.headerDesc}
+            </p>
+          </div>
         </div>
 
         {/* Dashboard Panels */}
@@ -181,7 +226,7 @@ export default function AdminPage() {
           {/* 1. Upload Form */}
           <div className="glass-panel" style={{ padding: "2rem", height: "fit-content" }}>
             <h2 style={{ fontSize: "1.25rem", display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "1.5rem" }}>
-              <Upload size={20} style={{ color: "var(--primary)" }} /> Upload Material
+              <Upload size={20} style={{ color: "var(--primary)" }} /> {t.uploadHeading}
             </h2>
 
             {uploadSuccess && (
@@ -218,7 +263,7 @@ export default function AdminPage() {
 
             <form onSubmit={handleUploadSubmit}>
               <div className="form-group">
-                <label className="form-label">Select PDF or Text File</label>
+                <label className="form-label">{t.labelFile}</label>
                 <input
                   type="file"
                   accept=".pdf,.txt"
@@ -235,11 +280,11 @@ export default function AdminPage() {
               </div>
 
               <div className="form-group">
-                <label className="form-label">Subject (e.g. English, Afaan Oromo, Biology)</label>
+                <label className="form-label">{t.labelSubject}</label>
                 <input
                   type="text"
                   className="form-input"
-                  placeholder="e.g. Biology"
+                  placeholder={t.placeholderSubject}
                   required
                   value={subject}
                   onChange={(e) => setSubject(e.target.value)}
@@ -247,11 +292,11 @@ export default function AdminPage() {
               </div>
 
               <div className="form-group">
-                <label className="form-label">Topic / Unit</label>
+                <label className="form-label">{t.labelTopic}</label>
                 <input
                   type="text"
                   className="form-input"
-                  placeholder="e.g. Cell Structure"
+                  placeholder={t.placeholderTopic}
                   required
                   value={topic}
                   onChange={(e) => setTopic(e.target.value)}
@@ -259,20 +304,20 @@ export default function AdminPage() {
               </div>
 
               <div className="form-group">
-                <label className="form-label">Grade Band</label>
+                <label className="form-label">{t.labelGrade}</label>
                 <select
                   className="form-select"
                   value={gradeBand}
                   onChange={(e) => handleGradeBandChange(e.target.value)}
                 >
-                  <option value="1-6">Grades 1-6 (Afaan Oromo)</option>
-                  <option value="7-8">Grades 7-8 (Afaan Oromo)</option>
-                  <option value="9-12">Grades 9-12 (English)</option>
+                  <option value="1-6">{t.optGrade1}</option>
+                  <option value="7-8">{t.optGrade2}</option>
+                  <option value="9-12">{t.optGrade3}</option>
                 </select>
               </div>
 
               <div className="form-group">
-                <label className="form-label">Grounding Language</label>
+                <label className="form-label">{t.labelLanguage}</label>
                 <input
                   type="text"
                   className="form-input"
@@ -288,7 +333,7 @@ export default function AdminPage() {
                 disabled={uploading || !file || !subject || !topic}
                 style={{ width: "100%", marginTop: "1rem" }}
               >
-                {uploading ? "Uploading & Chunking..." : "Process & Save to Vector DB"}
+                {uploading ? t.uploadingBtn : t.btnSubmit}
               </button>
             </form>
           </div>
@@ -296,16 +341,16 @@ export default function AdminPage() {
           {/* 2. Vector DB Chunks Table */}
           <div className="glass-panel" style={{ padding: "2rem", overflow: "hidden", display: "flex", flexDirection: "column", minHeight: "500px" }}>
             <h2 style={{ fontSize: "1.25rem", display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "1.5rem" }}>
-              <Database size={20} style={{ color: "var(--secondary)" }} /> Vector Database Status ({chunks.length} Chunks)
+              <Database size={20} style={{ color: "var(--secondary)" }} /> {t.dbHeading} ({chunks.length} {t.chunksCount})
             </h2>
 
             <div style={{ flex: 1, overflowY: "auto" }}>
               {fetchingChunks ? (
-                <p>Loading database status...</p>
+                <p>{t.loadingDB}</p>
               ) : chunks.length === 0 ? (
                 <div style={{ textAlign: "center", padding: "4rem 1rem", color: "var(--text-secondary)" }}>
                   <FileText size={32} style={{ color: "var(--text-muted)", marginBottom: "0.5rem" }} />
-                  <p>Vector database is empty. Seed local mock chunks or upload a document to get started.</p>
+                  <p>{t.emptyDB}</p>
                 </div>
               ) : (
                 <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
@@ -356,9 +401,21 @@ export default function AdminPage() {
                         )}
                       </div>
                       
-                      <p style={{ fontSize: "0.825rem", color: "var(--text-secondary)", fontStyle: "italic", margin: 0 }}>
-                        Source: {c.source_document}
-                      </p>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <p style={{ fontSize: "0.825rem", color: "var(--text-secondary)", fontStyle: "italic", margin: 0 }}>
+                          {t.sourceLabel}: {c.source_document}
+                        </p>
+                        <span style={{
+                          fontSize: "0.72rem",
+                          color: "var(--secondary)",
+                          background: "rgba(20, 184, 166, 0.05)",
+                          padding: "0.1rem 0.4rem",
+                          borderRadius: "4px",
+                          border: "1px solid rgba(20, 184, 166, 0.1)"
+                        }}>
+                          {t.uploadedByLabel}: <strong>{c.uploaded_by}</strong>
+                        </span>
+                      </div>
                       
                       <p style={{ fontSize: "0.85rem", color: "#fff", lineHeight: 1.4, margin: 0 }}>
                         {c.content_preview}
@@ -383,7 +440,7 @@ export default function AdminPage() {
                 gap: "0.5rem"
               }}>
                 <ShieldAlert size={16} />
-                <span>You are logged in as a <strong>Teacher</strong>. Document deletion is restricted to Administrators.</span>
+                <span>{t.warningTeacher}</span>
               </div>
             )}
 

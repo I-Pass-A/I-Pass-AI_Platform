@@ -13,6 +13,7 @@ export async function POST(req: NextRequest) {
     const topic = formData.get("topic") as string;
     const grade = formData.get("grade") as string;
     const language = formData.get("language") as string;
+    const uploadedBy = formData.get("uploaded_by") as string; // Teacher or admin identifier
 
     if (!file || !subject || !topic || !grade || !language) {
       return NextResponse.json({ detail: "Missing required fields" }, { status: 400 });
@@ -91,7 +92,8 @@ export async function POST(req: NextRequest) {
         source_document: file.name,
         content: chunkText,
         embedding,
-        version: 1
+        version: 1,
+        uploaded_by: uploadedBy || "System"
       }).select();
 
       if (error) {

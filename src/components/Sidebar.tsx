@@ -79,19 +79,11 @@ export default function Sidebar() {
         alignItems: "center",
         gap: "0.75rem"
       }}>
-        <div style={{
-          width: "40px",
-          height: "40px",
-          borderRadius: "10px",
-          background: "linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          fontWeight: "bold",
-          fontSize: "1.25rem"
-        }}>
-          I
-        </div>
+        <img 
+          src="/logo.png" 
+          alt="I-Pass-A Logo" 
+          style={{ width: "40px", height: "40px", borderRadius: "8px", objectFit: "cover" }} 
+        />
         <div>
           <h2 style={{ fontSize: "1.3rem", fontWeight: 700, margin: 0 }} className="text-gradient-primary">
             I-Pass-A

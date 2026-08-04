@@ -161,19 +161,11 @@ export default function Home() {
         padding: "1rem 0"
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-          <div style={{
-            width: "36px",
-            height: "36px",
-            borderRadius: "8px",
-            background: "linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontWeight: 800,
-            fontSize: "1.1rem"
-          }}>
-            I
-          </div>
+          <img 
+            src="/logo.png" 
+            alt="I-Pass-A Logo" 
+            style={{ width: "36px", height: "36px", borderRadius: "8px", objectFit: "cover" }} 
+          />
           <span style={{ fontSize: "1.25rem", fontWeight: 700 }} className="text-gradient-primary">
             I-Pass-A
           </span>

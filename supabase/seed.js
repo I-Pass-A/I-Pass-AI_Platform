@@ -133,7 +133,8 @@ async function seedData() {
         .insert({
           ...chunk,
           embedding,
-          version: 1
+          version: 1,
+          uploaded_by: "System Seed"
         });
         
       if (insErr) {

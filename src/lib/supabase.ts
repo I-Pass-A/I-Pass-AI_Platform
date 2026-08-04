@@ -64,6 +64,7 @@ class MockQueryBuilder {
             source_document: "English_Grade9_Grammar.pdf",
             content: "The Present Perfect Tense is used to describe an action that happened at an indefinite time in the past or began in the past and continues in the present. It is formed using 'have/has' + past participle (e.g., 'I have lived in Adama for five years'). In contrast, the Past Simple Tense is used for actions completed at a specific time in the past (e.g., 'I lived in Adama in 2021'). Common markers for present perfect include 'already', 'yet', 'since', and 'for', while past simple uses 'yesterday', 'ago', and 'last year'.",
             version: 1,
+            uploaded_by: "System Seed",
             created_at: new Date().toISOString()
           },
           {
@@ -75,6 +76,7 @@ class MockQueryBuilder {
             source_document: "Biology_Grade10_Unit2.pdf",
             content: "The cell is the basic structural and functional unit of life. Animal cells and plant cells have key differences. Plant cells have a rigid cell wall made of cellulose, chloroplasts for photosynthesis, and a large central vacuole for turgor pressure. Animal cells lack cell walls and chloroplasts, and typically have smaller, temporary vacuoles. Both cell types share common organelles like the nucleus (which houses DNA), mitochondria (the powerhouses generating ATP energy), ribosomes (sites of protein synthesis), and the cell membrane (regulating entry and exit of materials).",
             version: 1,
+            uploaded_by: "System Seed",
             created_at: new Date().toISOString()
           },
           {
@@ -86,6 +88,7 @@ class MockQueryBuilder {
             source_document: "Kutaa3_Caasluga_Barreeffama.txt",
             content: "Afaan Oromo keessatti dhamijni fi sagaleen caasaa bu'uuraa jechootaa uumu. Qubeelee Afaan Oromo guutuun 26 yoo ta'an, dubbachiiftuu (vowels) shani: a, e, i, o, u. Dubbachiiftuun kunniin dheeraa ykn gabaabaa ta'anii barreeffamu keessatti dachaafamanii (fkn, 'baala' vs 'bala') hiika jechaa jijjiiru. Dubbifamtoonni (consonants) immoo sagalee jabaa ykn laafaa qabu.",
             version: 1,
+            uploaded_by: "System Seed",
             created_at: new Date().toISOString()
           }
         ],
