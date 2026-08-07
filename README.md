@@ -1,4 +1,4 @@
-# I-Pass-A: AI-Powered Tutor & Sample Exam Prep (Supabase Version)
+# I-Pass-A: AI-Powered Tutor & Sample Exam Prep
 
 **I-Pass-A** is an AI-powered tutor and practice exam preparation web platform designed for Grades 1–12. It delivers curriculum-grounded learning across all subjects:
 - **Grades 9–12**: Delivered in **English**.
