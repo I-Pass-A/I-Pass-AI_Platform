@@ -1,4 +1,4 @@
-require("dotenv").config();
+require("dotenv").config({ path: ".env.local" });
 const { createClient } = require("@supabase/supabase-js");
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -105,7 +105,7 @@ async function seedData() {
     process.exit(1);
   }
 
-  if (count === 0) {
+  if (count === 0 || count === null) {
     console.log(`Seeding ${MOCK_CHUNKS.length} curriculum chunks. Generating embeddings...`);
     for (const chunk of MOCK_CHUNKS) {
       let embedding = [];
