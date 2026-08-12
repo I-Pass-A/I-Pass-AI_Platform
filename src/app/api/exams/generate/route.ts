@@ -12,17 +12,8 @@ export async function POST(req: NextRequest) {
 
     const supabaseAdmin = getSupabaseAdmin();
 
-    const gradeNum = parseInt(grade?.replace("Grade", "").trim() || "12");
-    let gradeBand = "12";
-    let language = "English";
-
-    if (gradeNum === 6) {
-      gradeBand = "6";
-      language = "Afaan Oromo";
-    } else if (gradeNum === 8) {
-      gradeBand = "8";
-      language = "Afaan Oromo";
-    }
+    const gradeBand = "12";
+    const language: string = "English";
 
     const allowedTypes = question_types && Array.isArray(question_types) && question_types.length > 0 
       ? question_types 
