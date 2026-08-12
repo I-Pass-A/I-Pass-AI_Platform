@@ -12,15 +12,15 @@ export async function POST(req: NextRequest) {
 
     const supabaseAdmin = getSupabaseAdmin();
 
-    const gradeNum = parseInt(grade?.replace("Grade", "").trim() || "9");
-    let gradeBand = "9-12";
+    const gradeNum = parseInt(grade?.replace("Grade", "").trim() || "12");
+    let gradeBand = "12";
     let language = "English";
 
-    if (gradeNum >= 1 && gradeNum <= 6) {
-      gradeBand = "1-6";
+    if (gradeNum === 6) {
+      gradeBand = "6";
       language = "Afaan Oromo";
-    } else if (gradeNum >= 7 && gradeNum <= 8) {
-      gradeBand = "7-8";
+    } else if (gradeNum === 8) {
+      gradeBand = "8";
       language = "Afaan Oromo";
     }
 

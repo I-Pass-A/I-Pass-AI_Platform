@@ -114,7 +114,7 @@ export default function Sidebar() {
             onChange={handleGradeChange}
             style={{ padding: "0.5rem 0.75rem", fontSize: "0.85rem", background: "rgba(0,0,0,0.4)" }}
           >
-            {Array.from({ length: 12 }, (_, i) => String(i + 1)).map((g) => (
+            {["6", "8", "12"].map((g) => (
               <option key={g} value={g}>{user.language === "Afaan Oromo" ? `Kutaa ${g}` : `Grade ${g}`}</option>
             ))}
           </select>

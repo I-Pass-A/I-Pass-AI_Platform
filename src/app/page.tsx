@@ -18,7 +18,7 @@ export default function Home() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState("student");
-  const [grade, setGrade] = useState("9");
+  const [grade, setGrade] = useState("12");
   
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -116,8 +116,8 @@ export default function Home() {
       ? "AI-Powered Tutoring & Smart Exam Preparation" 
       : "Barumsa AI fi Qophii Qormaataa Saffisaa",
     desc: lang === "EN"
-      ? "Empowering students from Grades 1–12 with personalized AI learning. Study in English (Grades 9–12) or Afaan Oromo (Grades 1–8) with curriculum-grounded tutoring and practice exams."
-      : "Barattoota Kutaa 1-12 barumsa AI dhuunfaatiin gahoomsuu. Barnoota kee Ingiliffaan (Kutaa 9-12) ykn Afaan Oromootiin (Kutaa 1-8) qorannoo qormaataa fi tutor-gochaan baradhu.",
+      ? "Empowering students in Grades 6, 8, and 12 with personalized AI learning. Study in English (Grade 12) or Afaan Oromo (Grades 6 & 8) with curriculum-grounded tutoring and practice exams."
+      : "Barattoota Kutaa 6, 8, fi 12 barumsa AI dhuunfaatiin gahoomsuu. Barnoota kee Ingiliffaan (Kutaa 12) ykn Afaan Oromootiin (Kutaa 6 & 8) qorannoo qormaataa fi tutor-gochaan baradhu.",
     discover: lang === "EN" ? "Discover the Platform" : "Platformii Argadhu",
     statStudents: lang === "EN" ? "12,500+ Active Students" : "Barattoota 12,500+ Ol",
     statExams: lang === "EN" ? "85,000+ Generated Exams" : "Qormaata 85,000+ Ol",
@@ -248,7 +248,7 @@ export default function Home() {
                 marginTop: "1.5rem"
               }}>
                 {[
-                  { label: t.statStudents, desc: lang === "EN" ? "Studying Grade 1-12 curriculum" : "Kutaa 1-12 barachaa jiru" },
+                  { label: t.statStudents, desc: lang === "EN" ? "Preparing for Grades 6, 8, & 12" : "Qophii Qormaata Kutaa 6, 8, fi 12" },
                   { label: t.statExams, desc: lang === "EN" ? "Mock and practice tests taken" : "Qormaanni mock fudhatame" },
                   { label: t.statSchools, desc: lang === "EN" ? "Schools using platform features" : "Manneen barumsaa itti fayyadaman" }
                 ].map((stat, idx) => (
@@ -399,7 +399,7 @@ export default function Home() {
                           onChange={(e) => setGrade(e.target.value)}
                           style={{ width: "100%" }}
                         >
-                          {Array.from({ length: 12 }, (_, i) => String(i + 1)).map((g) => (
+                          {["6", "8", "12"].map((g) => (
                             <option key={g} value={g}>Grade {g}</option>
                           ))}
                         </select>

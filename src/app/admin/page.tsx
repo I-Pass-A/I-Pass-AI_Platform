@@ -28,7 +28,7 @@ export default function AdminPage() {
   const [file, setFile] = useState<File | null>(null);
   const [subject, setSubject] = useState("");
   const [topic, setTopic] = useState("");
-  const [gradeBand, setGradeBand] = useState("9-12");
+  const [gradeBand, setGradeBand] = useState("12");
   const [language, setLanguage] = useState("English");
   
   const [uploading, setUploading] = useState(false);
@@ -69,9 +69,9 @@ export default function AdminPage() {
     labelTopic: isAO ? "Mata-duree / Boqonnaa" : "Topic / Unit",
     placeholderTopic: isAO ? "fkn. Boqonnaa 2, Caasluga" : "e.g. Cell Structure, Tenses",
     labelGrade: isAO ? "Kutaa Barnootaa" : "Grade Band",
-    optGrade1: isAO ? "Kutaa 1-6 (Afaan Oromoo)" : "Grades 1-6 (Afaan Oromo)",
-    optGrade2: isAO ? "Kutaa 7-8 (Afaan Oromoo)" : "Grades 7-8 (Afaan Oromo)",
-    optGrade3: isAO ? "Kutaa 9-12 (Ingiliffa)" : "Grades 9-12 (English)",
+    optGrade1: isAO ? "Kutaa 6 (Afaan Oromoo)" : "Grade 6 (Afaan Oromo)",
+    optGrade2: isAO ? "Kutaa 8 (Afaan Oromoo)" : "Grade 8 (Afaan Oromo)",
+    optGrade3: isAO ? "Kutaa 12 (Ingiliffa)" : "Grade 12 (English)",
     labelLanguage: isAO ? "Afaan Kuusaa (RAG)" : "Grounding Language",
     btnSubmit: isAO ? "Vector DBtti Kuusi" : "Process & Save to Vector DB",
     dbHeading: isAO ? "Haala Vector Database" : "Vector Database Status",
@@ -194,7 +194,7 @@ export default function AdminPage() {
 
   const handleGradeBandChange = (val: string) => {
     setGradeBand(val);
-    if (val === "1-6" || val === "7-8") {
+    if (val === "6" || val === "8") {
       setLanguage("Afaan Oromo");
     } else {
       setLanguage("English");
@@ -310,9 +310,9 @@ export default function AdminPage() {
                   value={gradeBand}
                   onChange={(e) => handleGradeBandChange(e.target.value)}
                 >
-                  <option value="1-6">{t.optGrade1}</option>
-                  <option value="7-8">{t.optGrade2}</option>
-                  <option value="9-12">{t.optGrade3}</option>
+                  <option value="6">{t.optGrade1}</option>
+                  <option value="8">{t.optGrade2}</option>
+                  <option value="12">{t.optGrade3}</option>
                 </select>
               </div>
 
