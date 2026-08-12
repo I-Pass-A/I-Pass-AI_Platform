@@ -25,8 +25,17 @@ export async function POST(req: NextRequest) {
 
     const subject = sessionData.subject;
 
-    const gradeBand = "12";
-    const language = "English";
+    const gradeNum = parseInt(grade?.replace("Grade", "").trim() || "12");
+    let gradeBand = "12";
+    let language = "English";
+
+    if (gradeNum === 6) {
+      gradeBand = "6";
+      language = "Afaan Oromo";
+    } else if (gradeNum === 9) {
+      gradeBand = "9";
+      language = "English";
+    }
 
     const apiKey = process.env.GEMINI_API_KEY;
     let ai: GoogleGenAI | null = null;

@@ -194,7 +194,11 @@ export default function AdminPage() {
 
   const handleGradeBandChange = (val: string) => {
     setGradeBand(val);
-    setLanguage("English");
+    if (val === "6") {
+      setLanguage("Afaan Oromo");
+    } else {
+      setLanguage("English");
+    }
   };
 
   return (
@@ -306,6 +310,8 @@ export default function AdminPage() {
                   value={gradeBand}
                   onChange={(e) => handleGradeBandChange(e.target.value)}
                 >
+                  <option value="6">{t.optGrade1}</option>
+                  <option value="9">{t.optGrade2}</option>
                   <option value="12">{t.optGrade3}</option>
                 </select>
               </div>

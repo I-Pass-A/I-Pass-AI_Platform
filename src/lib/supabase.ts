@@ -71,7 +71,7 @@ class MockQueryBuilder {
             id: 2,
             subject: "Biology",
             topic: "Cell Structure",
-            grade: "12",
+            grade: "9",
             language: "English",
             source_document: "Biology_Grade10_Unit2.pdf",
             content: "The cell is the basic structural and functional unit of life. Animal cells and plant cells have key differences. Plant cells have a rigid cell wall made of cellulose, chloroplasts for photosynthesis, and a large central vacuole for turgor pressure. Animal cells lack cell walls and chloroplasts, and typically have smaller, temporary vacuoles. Both cell types share common organelles like the nucleus (which houses DNA), mitochondria (the powerhouses generating ATP energy), ribosomes (sites of protein synthesis), and the cell membrane (regulating entry and exit of materials).",
