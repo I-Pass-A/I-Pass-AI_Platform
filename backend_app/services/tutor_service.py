@@ -1,8 +1,8 @@
 from typing import List, Optional
-from app.models.schemas import (
+from backend_app.models.schemas import (
     QueryRequest, TutorResponse, ContextChunk, ChunkMetadata, PracticeQuestion
 )
-from app.services.vector_store import vector_db
+from backend_app.services.vector_store import vector_db
 
 class TutorService:
     """

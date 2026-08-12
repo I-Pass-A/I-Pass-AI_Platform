@@ -1,9 +1,9 @@
 import uuid
 from typing import List, Dict
-from app.models.schemas import (
+from backend_app.models.schemas import (
     ExamQuestionSchema, ExamGenerationRequest, ExamSubmitRequest, ExamResultResponse, QuestionEvaluation
 )
-from app.services.vector_store import vector_db
+from backend_app.services.vector_store import vector_db
 
 class ExamService:
     """

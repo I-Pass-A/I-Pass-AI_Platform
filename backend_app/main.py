@@ -1,9 +1,9 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.config import settings
-from app.api.v1.tutor import router as tutor_router
-from app.api.v1.curriculum import router as curriculum_router
-from app.api.v1.exams import router as exam_router
+from backend_app.config import settings
+from backend_app.api.v1.tutor import router as tutor_router
+from backend_app.api.v1.curriculum import router as curriculum_router
+from backend_app.api.v1.exams import router as exam_router
 
 app = FastAPI(
     title=settings.PROJECT_NAME,

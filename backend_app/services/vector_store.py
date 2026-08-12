@@ -1,7 +1,7 @@
 import math
 import re
 from typing import List, Tuple
-from app.models.schemas import ContextChunk, ChunkMetadata
+from backend_app.models.schemas import ContextChunk, ChunkMetadata
 
 class VectorStore:
     """
