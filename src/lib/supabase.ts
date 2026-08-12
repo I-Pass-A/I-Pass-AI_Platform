@@ -69,12 +69,12 @@ class MockQueryBuilder {
           },
           {
             id: 2,
-            subject: "Biology",
-            topic: "Cell Structure",
-            grade: "9",
-            language: "English",
-            source_document: "Biology_Grade10_Unit2.pdf",
-            content: "The cell is the basic structural and functional unit of life. Animal cells and plant cells have key differences. Plant cells have a rigid cell wall made of cellulose, chloroplasts for photosynthesis, and a large central vacuole for turgor pressure. Animal cells lack cell walls and chloroplasts, and typically have smaller, temporary vacuoles. Both cell types share common organelles like the nucleus (which houses DNA), mitochondria (the powerhouses generating ATP energy), ribosomes (sites of protein synthesis), and the cell membrane (regulating entry and exit of materials).",
+            subject: "Hawaasummaa",
+            topic: "Seenaa Adama",
+            grade: "8",
+            language: "Afaan Oromo",
+            source_document: "Kutaa8_Hawaasummaa_Adama.txt",
+            content: "Magaalaan Adaamaa wiirtuu daldalaa fi geejjibaa Oromiyaa keessatti iddoo guddaa qabdu dha. Bara 1915 keessa ijaarama babal'achuu kan jalqabde yoo ta'u, sababa daandii baaburaa Finfinnee irraa gara Jibutitti diriireeni. Adaamaan maqaa 'Naazireet' jedhamuunis waggoota hedduuf waamamaa turte, haa ta'u malee maqaa durii fi hawaasummaa ishee 'Adaamaa' jedhu deebifattee jirti. Magaalittiin misooma Smart City fi indaastiriitiin saffisaan guddachaa jirti.",
             version: 1,
             uploaded_by: "System Seed",
             created_at: new Date().toISOString()

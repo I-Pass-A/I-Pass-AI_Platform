@@ -2,11 +2,11 @@
   <img src="public/logo.png" alt="I-Pass-A Logo" width="160" style="border-radius: 16px;" />
 </p>
 
-# 🎓 I-Pass-A: AI-Powered Tutor & National Exam Prep (Grades 6, 9, and 12) 🚀
+# 🎓 I-Pass-A: AI-Powered Tutor & National Exam Prep (Grades 6, 8, and 12) 🚀
 
-**I-Pass-A** is an advanced AI-powered tutor and practice national exam preparation web platform designed for **Grades 6, 9, and 12**. It enables students to prepare for high-stakes examinations with curriculum-grounded learning:
-- **Grades 9 & 12**: Delivered in **English** 🇬🇧.
-- **Grade 6**: Delivered in **Afaan Oromo** 🌳.
+**I-Pass-A** is an advanced AI-powered tutor and practice national exam preparation web platform designed for **Grades 6, 8, and 12**. It enables students to prepare for high-stakes examinations with curriculum-grounded learning:
+- **Grade 12**: Delivered in **English** 🇬🇧.
+- **Grades 6 & 8**: Delivered in **Afaan Oromo** 🌳.
 
 This platform utilizes a serverless unified **Next.js + Supabase** stack:
 - **🔐 Supabase Auth**: Production-grade role-based user authentication.
@@ -113,7 +113,7 @@ Open your browser and navigate to **`http://localhost:3000`**.
 
 ## 🌟 Key Features Walkthrough
 
-1. **🔐 Authentication**: Register and sign in directly from the welcome screen. The role is automatically mapped, and the grade is set to Grade 6 (Afaan Oromo), Grade 9 (English), or Grade 12 (English).
-2. **💬 Conversational AI Tutor**: Study in Afaan Oromo for Grade 6, or English for Grades 9 & 12. The RAG pipeline fetches textbook snippets, displays citation sources, and answers step-by-step.
-3. **📝 National Exam Prep**: Generate custom tests on any Grade 6, 9, or 12 topic. Supports multiple-choice, true/false, fill-in-the-blank, and definition question formats. Click **Print / Export** to export clean, printer-friendly test sheets!
+1. **🔐 Authentication**: Register and sign in directly from the welcome screen. The role is automatically mapped, and the grade is set to Grade 6 (Afaan Oromo), Grade 8 (Afaan Oromo), or Grade 12 (English).
+2. **💬 Conversational AI Tutor**: Study in Afaan Oromo for Grades 6 & 8, or English for Grade 12. The RAG pipeline fetches textbook snippets, displays citation sources, and answers step-by-step.
+3. **📝 National Exam Prep**: Generate custom tests on any Grade 6, 8, or 12 topic. Supports multiple-choice, true/false, fill-in-the-blank, and definition question formats. Click **Print / Export** to export clean, printer-friendly test sheets!
 4. **⚙️ Admin Dashboard**: Teachers and administrators can upload curriculum textbooks. Text is parsed, split into overlaps, embedded via Gemini, and saved to the vector database with an audit uploader trail.

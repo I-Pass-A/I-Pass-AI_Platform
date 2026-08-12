@@ -32,9 +32,9 @@ export async function POST(req: NextRequest) {
     if (gradeNum === 6) {
       gradeBand = "6";
       language = "Afaan Oromo";
-    } else if (gradeNum === 9) {
-      gradeBand = "9";
-      language = "English";
+    } else if (gradeNum === 8) {
+      gradeBand = "8";
+      language = "Afaan Oromo";
     }
 
     const apiKey = process.env.GEMINI_API_KEY;
