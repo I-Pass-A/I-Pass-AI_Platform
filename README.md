@@ -5,8 +5,8 @@
 # 🎓 I-Pass-A: AI-Powered Tutor & Sample Exam Prep 🚀
 
 **I-Pass-A** is an advanced AI-powered tutor and practice exam preparation web platform designed for Grades 1–12. It delivers curriculum-grounded learning across all subjects:
-- **Grades 9–12**: Delivered in **English** 🇬🇧.
-- **Grades 1–6 & 7–8**: Delivered in **Afaan Oromo** 🌳.
+- **Grades 12**: Delivered in **English** 🇬🇧.
+- **Grades 6 & 8**: Delivered in **Afaan Oromo** 🌳.
 
 This platform utilizes a serverless unified **Next.js + Supabase** stack:
 - **🔐 Supabase Auth**: Production-grade role-based user authentication.
