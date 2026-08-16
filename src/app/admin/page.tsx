@@ -6,6 +6,7 @@ import Sidebar from "@/components/Sidebar";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { Upload, Trash2, Database, FileText, CheckCircle2, ShieldAlert } from "lucide-react";
+import Image from "next/image";
 
 interface ChunkInfo {
   id: number;
@@ -39,6 +40,37 @@ export default function AdminPage() {
   const [chunks, setChunks] = useState<ChunkInfo[]>([]);
   const [fetchingChunks, setFetchingChunks] = useState(false);
 
+  const fetchChunks = async () => {
+    setFetchingChunks(true);
+    try {
+      const { data, error } = await supabase
+        .from("curriculum_chunks")
+        .select("id, subject, topic, grade, language, source_document, content, version, uploaded_by, created_at")
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+
+      const formatted: ChunkInfo[] = (data || []).map((c: Record<string, unknown>) => ({
+        id: c.id as number,
+        subject: c.subject as string,
+        topic: c.topic as string,
+        grade: c.grade as string,
+        language: c.language as string,
+        source_document: c.source_document as string,
+        content_preview: (c.content as string).slice(0, 100) + "...",
+        version: c.version as number,
+        uploaded_by: (c.uploaded_by as string) || "System Seed",
+        created_at: c.created_at as string
+      }));
+
+      setChunks(formatted);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setFetchingChunks(false);
+    }
+  };
+
   useEffect(() => {
     if (!loading && (!user || (user.role !== "admin" && user.role !== "teacher"))) {
       router.push("/");
@@ -49,6 +81,7 @@ export default function AdminPage() {
     if (user && (user.role === "admin" || user.role === "teacher")) {
       fetchChunks();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
   if (loading || !user) return null;
@@ -94,37 +127,6 @@ export default function AdminPage() {
     errorMsg: isAO ? "Faayilii ol-kaasuun hin danda'amne. Maaloo sirrii ta'uu isaa mirkaneessi." : "Failed to parse and upload document. Ensure file format is valid."
   };
 
-  const fetchChunks = async () => {
-    setFetchingChunks(true);
-    try {
-      const { data, error } = await supabase
-        .from("curriculum_chunks")
-        .select("id, subject, topic, grade, language, source_document, content, version, uploaded_by, created_at")
-        .order("created_at", { ascending: false });
-
-      if (error) throw error;
-
-      const formatted: ChunkInfo[] = (data || []).map((c: any) => ({
-        id: c.id,
-        subject: c.subject,
-        topic: c.topic,
-        grade: c.grade,
-        language: c.language,
-        source_document: c.source_document,
-        content_preview: c.content.slice(0, 100) + "...",
-        version: c.version,
-        uploaded_by: c.uploaded_by || "System Seed",
-        created_at: c.created_at
-      }));
-
-      setChunks(formatted);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setFetchingChunks(false);
-    }
-  };
-
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setFile(e.target.files[0]);
@@ -164,8 +166,9 @@ export default function AdminPage() {
       } else {
         throw new Error(data.detail || t.errorMsg);
       }
-    } catch (err: any) {
-      setUploadError(err.message || t.errorMsg);
+    } catch (err: unknown) {
+      const errMsg = err instanceof Error ? err.message : t.errorMsg;
+      setUploadError(errMsg);
     } finally {
       setUploading(false);
     }
@@ -209,7 +212,7 @@ export default function AdminPage() {
         
         {/* Page Header */}
         <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
-          <img src="/logo.png" alt="I-Pass-A Logo" style={{ width: "56px", height: "56px", borderRadius: "10px", objectFit: "cover" }} />
+          <Image src="/logo.png" alt="I-Pass-A Logo" width={56} height={56} style={{ borderRadius: "10px", objectFit: "cover" }} />
           <div>
             <h1 style={{ fontSize: "2rem", fontWeight: 700, marginBottom: "0.25rem" }}>
               {t.headerTitle}

@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
-
+import "katex/dist/katex.min.css";
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,

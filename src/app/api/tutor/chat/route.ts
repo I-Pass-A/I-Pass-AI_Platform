@@ -2,204 +2,466 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { GoogleGenAI } from "@google/genai";
 
+// Current Gemini models
+const GENERATION_MODEL = "gemini-3.6-flash";
+const EMBEDDING_MODEL = "gemini-embedding-2";
+
 export async function POST(req: NextRequest) {
   try {
     const { session_id, query, grade } = await req.json();
 
-    if (!session_id || !query) {
-      return NextResponse.json({ detail: "session_id and query are required" }, { status: 400 });
+    if (!session_id || !query?.trim()) {
+      return NextResponse.json(
+        {
+          detail: "session_id and query are required",
+        },
+        { status: 400 }
+      );
     }
 
     const supabaseAdmin = getSupabaseAdmin();
 
-    // 1. Get tutor session details to find subject
-    const { data: sessionData, error: sessionErr } = await supabaseAdmin
-      .from("tutor_sessions")
-      .select("subject, user_id")
-      .eq("id", session_id)
-      .single();
+    // ============================================================
+    // 1. GET TUTOR SESSION
+    // ============================================================
+
+    const { data: sessionData, error: sessionErr } =
+      await supabaseAdmin
+        .from("tutor_sessions")
+        .select("subject, user_id")
+        .eq("id", session_id)
+        .single();
 
     if (sessionErr || !sessionData) {
-      return NextResponse.json({ detail: "Tutor session not found" }, { status: 404 });
+      console.error("Tutor session lookup failed:", sessionErr);
+
+      return NextResponse.json(
+        {
+          detail:
+            sessionErr?.message ||
+            "Tutor session not found",
+        },
+        { status: 404 }
+      );
     }
 
     const subject = sessionData.subject;
 
-    const gradeNum = parseInt(grade?.replace("Grade", "").trim() || "12");
+    // ============================================================
+    // 2. DETERMINE GRADE / LANGUAGE
+    // ============================================================
+
+    const gradeText = String(grade || "Grade 12");
+
+    const gradeMatch = gradeText.match(/\d+/);
+    const gradeNum = gradeMatch
+      ? parseInt(gradeMatch[0], 10)
+      : 12;
+
     let gradeBand = "12";
     let language = "English";
 
-    if (gradeNum === 6) {
-      gradeBand = "6";
-      language = "Afaan Oromo";
-    } else if (gradeNum === 8) {
-      gradeBand = "8";
+    if (gradeNum === 6 || gradeNum === 8) {
+      gradeBand = String(gradeNum);
       language = "Afaan Oromo";
     }
+
+    // ============================================================
+    // 3. INITIALIZE GEMINI
+    // ============================================================
 
     const apiKey = process.env.GEMINI_API_KEY;
-    let ai: GoogleGenAI | null = null;
-    if (apiKey) {
-      ai = new GoogleGenAI({ apiKey });
+
+    if (!apiKey) {
+      console.error(
+        "GEMINI_API_KEY is missing from .env"
+      );
+
+      return NextResponse.json(
+        {
+          detail:
+            "GEMINI_API_KEY is not configured.",
+        },
+        { status: 500 }
+      );
     }
 
-    // 2. Generate embedding for current query
-    let queryVector: number[] = [];
-    if (ai) {
-      try {
-        const embedRes = await ai.models.embedContent({
-          model: "text-embedding-004",
-          contents: query
-        });
-        if (embedRes.embeddings && embedRes.embeddings[0] && embedRes.embeddings[0].values) {
-          queryVector = embedRes.embeddings[0].values;
-        }
-      } catch (e) {
-        console.error("Error generating query embedding:", e);
-      }
-    }
-
-    // Mock vector if embedding failed or no api key
-    if (queryVector.length === 0) {
-      queryVector = Array.from({ length: 1536 }, (_, idx) => Math.sin(query.length + idx) * 0.1);
-    }
-
-    // 3. Call match_chunks RPC on Supabase
-    const { data: retrievedChunks, error: rpcErr } = await supabaseAdmin.rpc("match_chunks", {
-      query_embedding: queryVector,
-      match_threshold: 0.1,
-      match_count: 3,
-      filter_subject: subject,
-      filter_grade: gradeBand,
-      filter_language: language
+    const ai = new GoogleGenAI({
+      apiKey,
     });
 
-    if (rpcErr) {
-      console.error("RPC match_chunks failed:", rpcErr);
+    // ============================================================
+    // 4. CREATE QUERY EMBEDDING
+    // ============================================================
+
+    let queryVector: number[] = [];
+
+    try {
+      const embedRes = await ai.models.embedContent({
+        model: EMBEDDING_MODEL,
+        contents: query.trim(),
+        config: {
+          outputDimensionality: 1536,
+        },
+      });
+
+      const values =
+        embedRes.embeddings?.[0]?.values;
+
+      if (values && values.length > 0) {
+        queryVector = values;
+      }
+
+      console.log(
+        "Embedding generated:",
+        queryVector.length
+      );
+    } catch (embeddingError) {
+      console.error(
+        "Embedding generation failed:",
+        embeddingError
+      );
     }
 
-    const chunks = retrievedChunks || [];
-    const contextTexts = chunks.map((c: any) => c.content);
+    // ============================================================
+    // 5. RAG RETRIEVAL
+    // ============================================================
 
-    // 4. Out-of-scope check
-    let outOfScope = false;
-    let explanation = "";
+    let chunks: Array<{
+      source_document: string;
+      content: string;
+      similarity: number;
+    }> = [];
 
-    if (ai) {
-      const scopePrompt = `
-You are a curriculum gatekeeper for I-Pass-A, an educational tutoring system.
-Your job is to determine if the student's question is OUT OF SCOPE for Grade ${gradeBand} ${subject}.
-
-Curriculum Grounding context:
-${contextTexts.slice(0, 3).join("\n---\n")}
-
-Student Query: "${query}"
-
-Analyze if the query is relevant to Grade ${gradeBand} ${subject} or school syllabus for this subject.
-If it is clearly unrelated (e.g. asking for coding in an English class, asking for unrelated personal advice, or adult topics), classify it as OUT OF SCOPE.
-Otherwise, classify it as IN SCOPE.
-
-Respond in JSON format:
-{
-  "out_of_scope": true/false,
-  "explanation": "Brief explanation of why it is out of scope and redirect to the correct topic, or empty if in scope. Write explanation in the language of the subject (English for Grade 12, Afaan Oromo for Grade 6 & 8)."
-}
-`;
+    if (queryVector.length > 0) {
       try {
-        const scopeRes = await ai.models.generateContent({
-          model: "gemini-2.5-flash",
-          contents: scopePrompt,
-          config: { responseMimeType: "application/json" }
-        });
-        const parsedScope = JSON.parse(scopeRes.text || "{}");
-        outOfScope = parsedScope.out_of_scope;
-        explanation = parsedScope.explanation;
-      } catch (e) {
-        console.error("Scope verification failed:", e);
-      }
-    } else {
-      // Mock scope check fallback
-      const codingKeywords = ["python", "javascript", "code", "programming", "sql", "html"];
-      if (["english", "biology", "maths"].includes(subject.toLowerCase()) && codingKeywords.some(kw => query.toLowerCase().includes(kw))) {
-        outOfScope = true;
-        explanation = `This question is about coding/programming, which is outside the scope of Grade ${gradeBand} ${subject}.`;
+        const { data: retrievedChunks, error: rpcErr } =
+          await supabaseAdmin.rpc(
+            "match_chunks",
+            {
+              query_embedding: queryVector,
+              match_threshold: 0.1,
+              match_count: 5,
+              filter_subject: subject,
+              filter_grade: gradeBand,
+              filter_language: language,
+            }
+          );
+
+        if (rpcErr) {
+          console.error(
+            "match_chunks RPC error:",
+            rpcErr
+          );
+        } else {
+          chunks = retrievedChunks || [];
+        }
+      } catch (rpcError) {
+        console.error(
+          "RAG retrieval failed:",
+          rpcError
+        );
       }
     }
 
-    let answer = "";
-    if (outOfScope) {
-      answer = explanation || `This question falls outside the curriculum scope of Grade ${grade} ${subject}.`;
-    } else if (!ai) {
-      // Mock answer fallback
-      const sources = Array.from(new Set(chunks.map((c: any) => c.source_document)));
-      answer = `**(Mock AI Tutor)** Thank you for asking about **${query}**.\n\nHere is a step-by-step explanation:\n1. Since the Gemini API key is not configured, this is a simulated response.\n2. In a live system, this response would be generated using your curriculum documents: *${sources.length > 0 ? sources.join(", ") : 'No documents uploaded yet'}*.\n3. Make sure to upload curriculum text files in the admin dashboard and configure your \`GEMINI_API_KEY\`.`;
-    } else {
-      // Get session history
-      const { data: history } = await supabaseAdmin
+    const contextTexts = chunks
+      .map((chunk) => chunk.content)
+      .filter(Boolean);
+
+    // ============================================================
+    // 6. GET CHAT HISTORY
+    // ============================================================
+
+    const { data: history, error: historyError } =
+      await supabaseAdmin
         .from("tutor_messages")
         .select("sender, content")
         .eq("session_id", session_id)
-        .order("timestamp", { ascending: true })
-        .limit(5);
+        .order("timestamp", {
+          ascending: true,
+        })
+        .limit(10);
 
-      const historyBlock = (history || []).map((m: any) => 
-        `${m.sender === "student" ? "Student" : "Tutor"}: ${m.content}`
-      ).join("\n");
+    if (historyError) {
+      console.error(
+        "History loading failed:",
+        historyError
+      );
+    }
 
+    const historyBlock = (history || [])
+      .map(
+        (message: {
+          sender: string;
+          content: string;
+        }) =>
+          `${
+            message.sender === "student"
+              ? "Student"
+              : "Tutor"
+          }: ${message.content}`
+      )
+      .join("\n");
+
+    // ============================================================
+    // 7. OUT-OF-SCOPE CHECK
+    // ============================================================
+
+    let outOfScope = false;
+    let explanation = "";
+
+    const scopePrompt = `
+You are the curriculum gatekeeper for I-Pass-A.
+
+Student level:
+Grade ${gradeBand}
+
+Subject:
+${subject}
+
+Language:
+${language}
+
+Curriculum context:
+${
+  contextTexts.length > 0
+    ? contextTexts.join("\n---\n")
+    : "No curriculum documents are currently available."
+}
+
+Student question:
+"${query}"
+
+Determine whether the question belongs to Grade ${gradeBand}
+${subject} or is reasonably related to learning this subject.
+
+Clearly unrelated questions should be OUT OF SCOPE.
+
+Examples:
+- Coding questions during English class -> OUT OF SCOPE
+- Completely unrelated personal questions -> OUT OF SCOPE
+- Adult/sexual topics -> OUT OF SCOPE
+- Questions about the subject -> IN SCOPE
+- Grammar questions in English -> IN SCOPE
+- Mathematics questions in Maths -> IN SCOPE
+
+Return ONLY valid JSON:
+
+{
+  "out_of_scope": true,
+  "explanation": "short explanation"
+}
+
+If the question is in scope:
+
+{
+  "out_of_scope": false,
+  "explanation": ""
+}
+
+Write the explanation in ${language}.
+`;
+
+    try {
+      const scopeResponse =
+        await ai.models.generateContent({
+          model: GENERATION_MODEL,
+          contents: scopePrompt,
+          config: {
+            responseMimeType:
+              "application/json",
+          },
+        });
+
+      const scopeText =
+        scopeResponse.text?.trim() || "{}";
+
+      const parsedScope =
+        JSON.parse(scopeText);
+
+      outOfScope =
+        parsedScope.out_of_scope === true;
+
+      explanation =
+        parsedScope.explanation || "";
+    } catch (scopeError) {
+      console.error(
+        "Scope verification failed:",
+        scopeError
+      );
+
+      // Do not block the student if scope verification fails.
+      outOfScope = false;
+      explanation = "";
+    }
+
+    // ============================================================
+    // 8. GENERATE ANSWER
+    // ============================================================
+
+    let answer = "";
+
+    if (outOfScope) {
+      answer =
+        explanation ||
+        `This question is outside the Grade ${gradeBand} ${subject} curriculum.`;
+    } else {
       const systemInstruction = `
-You are an expert, friendly AI Tutor for Grade ${gradeBand} in ${subject}. The language of instruction is ${language}.
-All your explanations must be:
-1. Grounded in the provided curriculum content. Do not make up facts not mentioned in context unless it's basic background math/grammar.
-2. Formatted step-by-step, making it easy for a student to follow.
-3. Engaging, clear, and age-appropriate (Grade ${grade} level).
-4. Written entirely in ${language}.
+You are I-Pass-A, an expert AI tutor.
+
+Student:
+Grade ${gradeBand}
+
+Subject:
+${subject}
+
+Language:
+${language}
+
+Your responsibilities:
+
+1. Teach clearly and patiently.
+2. Explain difficult ideas step by step.
+3. Use examples appropriate for the student's grade.
+4. Stay focused on ${subject}.
+5. Use the curriculum context when available.
+6. Do not invent curriculum-specific facts.
+7. If the curriculum context does not contain enough information,
+   clearly say that the uploaded curriculum does not provide enough
+   information rather than pretending.
+8. Answer entirely in ${language}.
+9. Use Markdown when useful.
+10. For calculations, show the steps.
+11. For grammar, provide examples.
+12. Encourage the student to understand rather than simply memorize.
 `;
 
       const mainPrompt = `
-Curriculum Context Chunks:
-${contextTexts.join("\n---\n")}
+CURRICULUM CONTEXT
+==================
 
-Recent Chat History:
-${historyBlock}
+${
+  contextTexts.length > 0
+    ? contextTexts.join("\n\n---\n\n")
+    : "No curriculum documents were retrieved for this question."
+}
 
-Current Question: "${query}"
+RECENT CHAT HISTORY
+===================
 
-Provide your step-by-step tutoring explanation below in ${language}:
+${
+  historyBlock ||
+  "No previous conversation."
+}
+
+CURRENT STUDENT QUESTION
+========================
+
+${query}
+
+Now answer the student's question.
+
+Give a clear, useful, step-by-step explanation.
 `;
 
       try {
-        const response = await ai.models.generateContent({
-          model: "gemini-2.5-flash",
-          contents: mainPrompt,
-          config: {
-            systemInstruction
-          }
-        });
-        answer = response.text || "";
-      } catch (err: any) {
-        console.error("AI Generation failed:", err);
-        answer = `Sorry, there was an error generating the tutoring response. Please try again. (${err.message})`;
+        const response =
+          await ai.models.generateContent({
+            model: GENERATION_MODEL,
+            contents: mainPrompt,
+            config: {
+              systemInstruction,
+              temperature: 0.4,
+              maxOutputTokens: 2048,
+            },
+          });
+
+        answer =
+          response.text?.trim() ||
+          "I could not generate an answer. Please try again.";
+      } catch (generationError) {
+        console.error(
+          "Gemini generation failed:",
+          generationError
+        );
+
+        return NextResponse.json(
+          {
+            detail:
+              "Gemini failed to generate the tutoring response.",
+            error:
+              generationError instanceof Error
+                ? generationError.message
+                : String(generationError),
+          },
+          { status: 500 }
+        );
       }
     }
 
-    // 5. Save student message and tutor message to database
-    await supabaseAdmin.from("tutor_messages").insert([
-      { session_id, sender: "student", content: query },
-      { session_id, sender: "tutor", content: answer }
-    ]);
+    // ============================================================
+    // 9. SAVE MESSAGES
+    // ============================================================
+
+    const { error: saveError } =
+      await supabaseAdmin
+        .from("tutor_messages")
+        .insert([
+          {
+            session_id,
+            sender: "student",
+            content: query.trim(),
+          },
+          {
+            session_id,
+            sender: "tutor",
+            content: answer,
+            sources: chunks.map((chunk) => ({
+              source: chunk.source_document,
+              similarity: chunk.similarity,
+            })),
+            out_of_scope: outOfScope,
+          },
+        ]);
+
+    if (saveError) {
+      console.error(
+        "Saving tutor messages failed:",
+        saveError
+      );
+    }
+
+    // ============================================================
+    // 10. RETURN RESPONSE
+    // ============================================================
 
     return NextResponse.json({
       response: answer,
-      sources: chunks.map((c: any) => ({
-        source: c.source_document,
-        content: c.content,
-        similarity: c.similarity
-      })),
-      out_of_scope: outOfScope
-    });
 
-  } catch (error: any) {
-    console.error("Tutor chat endpoint failed:", error);
-    return NextResponse.json({ detail: error.message || "An error occurred during chat processing" }, { status: 500 });
+      sources: chunks.map((chunk) => ({
+        source: chunk.source_document,
+        content: chunk.content,
+        similarity: chunk.similarity,
+      })),
+
+      out_of_scope: outOfScope,
+    });
+  } catch (error: unknown) {
+    console.error(
+      "Tutor chat endpoint failed:",
+      error
+    );
+
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Unknown server error";
+
+    return NextResponse.json(
+      {
+        detail: message,
+      },
+      { status: 500 }
+    );
   }
 }

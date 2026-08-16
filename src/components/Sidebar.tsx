@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import Image from "next/image";
 
 export default function Sidebar() {
   const { user, logout, updateUserLanguage, updateUserGrade } = useAuth();
@@ -81,10 +82,12 @@ export default function Sidebar() {
         gap: "0.75rem",
         textAlign: "center"
       }}>
-        <img 
+        <Image 
           src="/logo.png" 
           alt="I-Pass-A Logo" 
-          style={{ width: "88px", height: "88px", borderRadius: "16px", objectFit: "cover" }} 
+          width={88}
+          height={88}
+          style={{ borderRadius: "16px", objectFit: "cover" }} 
         />
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
           <h2 style={{ fontSize: "1.45rem", fontWeight: 800, margin: 0 }} className="text-gradient-primary">

@@ -22,8 +22,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ detail: "Exam not found" }, { status: 404 });
     }
 
-    const answerKey = examData.answer_key;
-    const correctMap: Record<number, any> = {};
+    const answerKey: Array<{ id: number; correct_answer: string; explanation: string }> = examData.answer_key;
+    const correctMap: Record<number, { id: number; correct_answer: string; explanation: string }> = {};
     for (const item of answerKey) {
       correctMap[item.id] = item;
     }
@@ -74,8 +74,9 @@ export async function POST(req: NextRequest) {
       results
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errMsg = error instanceof Error ? error.message : "An error occurred during grading";
     console.error("Submit exam endpoint error:", error);
-    return NextResponse.json({ detail: error.message || "An error occurred during grading" }, { status: 500 });
+    return NextResponse.json({ detail: errMsg }, { status: 500 });
   }
 }

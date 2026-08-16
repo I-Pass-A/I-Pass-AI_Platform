@@ -67,15 +67,27 @@ export async function POST(req: NextRequest) {
       console.error("match_chunks RPC failed:", rpcErr);
     }
 
-    const contextBlock = (chunks || []).map((c: any) => c.content).join("\n---\n");
+    const contextBlock = (chunks || []).map((c: { content: string }) => c.content).join("\n---\n");
 
-    let questions: any[] = [];
-    let answerKey: any[] = [];
+    interface ExamQuestion {
+      id: number;
+      type: string;
+      question_text: string;
+      options?: string[];
+    }
+    interface AnswerKeyItem {
+      id: number;
+      correct_answer: string;
+      explanation: string;
+    }
+
+    let questions: ExamQuestion[] = [];
+    let answerKey: AnswerKeyItem[] = [];
 
     if (!ai) {
       // Mock exam fallback based on chosen types
-      const mockQuestions: any[] = [];
-      const mockAnswerKey: any[] = [];
+      const mockQuestions: ExamQuestion[] = [];
+      const mockAnswerKey: AnswerKeyItem[] = [];
 
       allowedTypes.forEach((t, index) => {
         const qId = index + 1;
@@ -199,9 +211,10 @@ Generate the exam. Output MUST be valid JSON matching this schema:
         const data = JSON.parse(response.text || "{}");
         questions = data.questions;
         answerKey = data.answer_key;
-      } catch (err: any) {
+      } catch (err: unknown) {
+        const errMsg = err instanceof Error ? err.message : "Unknown error";
         console.error("AI exam generation failed:", err);
-        return NextResponse.json({ detail: `AI Exam generation failed: ${err.message}` }, { status: 500 });
+        return NextResponse.json({ detail: `AI Exam generation failed: ${errMsg}` }, { status: 500 });
       }
     }
 
@@ -228,8 +241,9 @@ Generate the exam. Output MUST be valid JSON matching this schema:
       questions: examData.questions
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errMsg = error instanceof Error ? error.message : "An error occurred during exam generation";
     console.error("Generate exam API error:", error);
-    return NextResponse.json({ detail: error.message || "An error occurred during exam generation" }, { status: 500 });
+    return NextResponse.json({ detail: errMsg }, { status: 500 });
   }
 }

@@ -69,6 +69,36 @@ export default function ExamsPage() {
   const [fetchingSaved, setFetchingSaved] = useState(false);
   const [viewingSaved, setViewingSaved] = useState(true); // Toggle saved vs generate
 
+  const fetchSavedExams = async () => {
+    if (!user) return;
+    setFetchingSaved(true);
+    try {
+      const { data, error } = await supabase
+        .from("exams")
+        .select("id, subject, topic, difficulty, grade, questions, created_at")
+        .eq("grade", user.grade)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+
+      const formatted = (data || []).map((ex: Record<string, unknown>) => ({
+        id: ex.id as number,
+        subject: ex.subject as string,
+        topic: ex.topic as string,
+        difficulty: ex.difficulty as string,
+        grade: ex.grade as string,
+        question_count: Array.isArray(ex.questions) ? ex.questions.length : 0,
+        created_at: ex.created_at as string
+      }));
+
+      setSavedExams(formatted);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setFetchingSaved(false);
+    }
+  };
+
   useEffect(() => {
     if (!loading && !user) {
       router.push("/");
@@ -79,6 +109,7 @@ export default function ExamsPage() {
     if (user) {
       fetchSavedExams();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.grade]);
 
   if (loading || !user) return null;
@@ -130,36 +161,6 @@ export default function ExamsPage() {
       : "Please select at least one question type.",
     correctIndicator: isAO ? "Sirrii dha" : "Correct",
     incorrectIndicator: isAO ? "Sirrii miti" : "Incorrect"
-  };
-
-  const fetchSavedExams = async () => {
-    if (!user) return;
-    setFetchingSaved(true);
-    try {
-      const { data, error } = await supabase
-        .from("exams")
-        .select("id, subject, topic, difficulty, grade, questions, created_at")
-        .eq("grade", user.grade)
-        .order("created_at", { ascending: false });
-
-      if (error) throw error;
-
-      const formatted = (data || []).map((ex: any) => ({
-        id: ex.id,
-        subject: ex.subject,
-        topic: ex.topic,
-        difficulty: ex.difficulty,
-        grade: ex.grade,
-        question_count: Array.isArray(ex.questions) ? ex.questions.length : 0,
-        created_at: ex.created_at
-      }));
-
-      setSavedExams(formatted);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setFetchingSaved(false);
-    }
   };
 
   const handleGenerate = async (e: React.FormEvent) => {
