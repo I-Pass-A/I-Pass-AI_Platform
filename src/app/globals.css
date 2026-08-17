@@ -1062,3 +1062,287 @@ select {
     transition-duration: 0.01ms !important;
   }
 }
+/* =========================================================
+   BEAUTIFUL MATH / LESSON CONTENT
+========================================================= */
+
+.markdown-content {
+  width: 100%;
+  color: #e2e8f0;
+}
+
+/* Normal paragraphs */
+.markdown-content p {
+  margin: 0 0 14px;
+  line-height: 1.8;
+}
+
+.markdown-content p:last-child {
+  margin-bottom: 0;
+}
+
+/* Lesson title */
+.markdown-content .lesson-title {
+  margin: 4px 0 22px;
+  padding: 15px 18px;
+  border-radius: 14px;
+
+  background:
+    linear-gradient(
+      135deg,
+      rgba(14, 165, 233, 0.14),
+      rgba(59, 130, 246, 0.08)
+    );
+
+  border: 1px solid rgba(56, 189, 248, 0.18);
+
+  color: #f8fafc;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+
+  box-shadow:
+    0 10px 30px rgba(0, 0, 0, 0.12);
+}
+
+/* Section */
+.markdown-content .lesson-section {
+  margin: 25px 0 15px;
+}
+
+.markdown-content .lesson-section h2 {
+  margin: 0;
+  padding: 11px 14px;
+
+  border-left: 4px solid #38bdf8;
+
+  background:
+    linear-gradient(
+      90deg,
+      rgba(14, 165, 233, 0.1),
+      transparent
+    );
+
+  color: #f8fafc;
+  font-size: 18px;
+  font-weight: 750;
+}
+
+/* Example heading */
+.markdown-content .example-heading {
+  margin: 20px 0 10px;
+  color: #67e8f9;
+  font-size: 16px;
+  font-weight: 750;
+}
+
+/* Divider */
+.markdown-content .lesson-divider {
+  height: 1px;
+  margin: 22px 0;
+
+  background:
+    linear-gradient(
+      90deg,
+      transparent,
+      rgba(56, 189, 248, 0.35),
+      transparent
+    );
+}
+
+/* Blockquote */
+.markdown-content .lesson-quote {
+  margin: 16px 0;
+  padding: 13px 16px;
+
+  border-left: 4px solid #22d3ee;
+  border-radius: 0 10px 10px 0;
+
+  background: rgba(14, 165, 233, 0.06);
+
+  color: #cbd5e1;
+}
+
+/* =========================================================
+   KATEX MATH
+========================================================= */
+
+/* Inline math */
+.markdown-content .katex {
+  color: #67e8f9;
+  font-size: 1.05em;
+}
+
+/* Display/block math */
+.markdown-content .katex-display {
+  margin: 20px 0;
+  padding: 18px 20px;
+
+  overflow-x: auto;
+  overflow-y: hidden;
+
+  border-radius: 14px;
+
+  background:
+    linear-gradient(
+      135deg,
+      rgba(14, 165, 233, 0.09),
+      rgba(30, 41, 59, 0.45)
+    );
+
+  border: 1px solid rgba(56, 189, 248, 0.16);
+
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.03),
+    0 8px 25px rgba(0, 0, 0, 0.12);
+
+  text-align: center;
+}
+
+/* Make large equations easier to read */
+.markdown-content .katex-display .katex {
+  color: #f8fafc;
+  font-size: 1.25em;
+}
+
+/* Math fractions */
+.markdown-content .katex .frac-line {
+  border-color: rgba(255, 255, 255, 0.7);
+}
+
+/* Math operators */
+.markdown-content .katex .mrel,
+.markdown-content .katex .mop,
+.markdown-content .katex .mbin {
+  color: #7dd3fc;
+}
+
+/* Math numbers */
+.markdown-content .katex .mord {
+  color: #f1f5f9;
+}
+
+/* =========================================================
+   LISTS
+========================================================= */
+
+.markdown-content ul,
+.markdown-content ol {
+  margin: 12px 0;
+  padding-left: 25px;
+}
+
+.markdown-content li {
+  margin: 7px 0;
+  line-height: 1.7;
+}
+
+.markdown-content li::marker {
+  color: #38bdf8;
+}
+
+/* =========================================================
+   CODE
+========================================================= */
+
+.markdown-content code {
+  padding: 3px 7px;
+  border-radius: 6px;
+
+  background: rgba(0, 0, 0, 0.35);
+
+  color: #67e8f9;
+
+  font-size: 0.9em;
+}
+
+.markdown-content pre {
+  margin: 16px 0;
+  padding: 16px;
+
+  overflow-x: auto;
+
+  border-radius: 12px;
+
+  background: #020617;
+
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.markdown-content pre code {
+  padding: 0;
+  background: transparent;
+  color: #cbd5e1;
+}
+
+/* =========================================================
+   TABLE
+========================================================= */
+
+.markdown-content .table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  margin: 18px 0;
+  border-radius: 12px;
+}
+
+.markdown-content table {
+  width: 100%;
+  min-width: 500px;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.markdown-content th,
+.markdown-content td {
+  padding: 11px 13px;
+  text-align: left;
+
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.markdown-content th {
+  background: rgba(14, 165, 233, 0.1);
+  color: #bae6fd;
+  font-weight: 700;
+}
+
+.markdown-content td {
+  color: #cbd5e1;
+}
+
+/* =========================================================
+   STRONG TEXT
+========================================================= */
+
+.markdown-content strong {
+  color: #ffffff;
+  font-weight: 750;
+}
+
+/* =========================================================
+   MOBILE MATH
+========================================================= */
+
+@media (max-width: 700px) {
+
+  .markdown-content .katex-display {
+    padding: 14px 10px;
+    margin: 15px -4px;
+    border-radius: 10px;
+    text-align: center;
+  }
+
+  .markdown-content .katex-display .katex {
+    font-size: 1.05em;
+  }
+
+  .markdown-content .lesson-title {
+    font-size: 19px;
+    padding: 12px 14px;
+  }
+
+  .markdown-content .lesson-section h2 {
+    font-size: 16px;
+  }
+}

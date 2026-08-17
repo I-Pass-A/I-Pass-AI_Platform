@@ -3,7 +3,9 @@
 import React, { useState, useEffect, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-
+import remarkMath from "remark-math";
+import rehypeKatex from "rehype-katex";
+import "katex/dist/katex.min.css";
 import { useAuth } from "@/context/AuthContext";
 import Sidebar from "@/components/Sidebar";
 import { useRouter } from "next/navigation";
@@ -912,122 +914,78 @@ export default function TutorPage() {
                                 </p>
 
                               ) : (
+<ReactMarkdown
+  remarkPlugins={[
+    remarkGfm,
+    remarkMath,
+  ]}
+  rehypePlugins={[
+    rehypeKatex,
+  ]}
+  components={{
+    h1: ({ children }) => (
+      <div className="lesson-title">
+        {children}
+      </div>
+    ),
 
-                                <ReactMarkdown
-                                  remarkPlugins={[
-                                    remarkGfm,
-                                  ]}
-                                  components={{
-                                    h1: ({
-                                      children,
-                                    }) => (
-                                      <h1>
-                                        {children}
-                                      </h1>
-                                    ),
+    h2: ({ children }) => (
+      <section className="lesson-section">
+        <h2>{children}</h2>
+      </section>
+    ),
 
-                                    h2: ({
-                                      children,
-                                    }) => (
-                                      <h2>
-                                        {children}
-                                      </h2>
-                                    ),
+    h3: ({ children }) => (
+      <h3 className="example-heading">
+        {children}
+      </h3>
+    ),
 
-                                    h3: ({
-                                      children,
-                                    }) => (
-                                      <h3>
-                                        {children}
-                                      </h3>
-                                    ),
+    p: ({ children }) => (
+      <p>{children}</p>
+    ),
 
-                                    p: ({
-                                      children,
-                                    }) => (
-                                      <p>
-                                        {children}
-                                      </p>
-                                    ),
+    strong: ({ children }) => (
+      <strong>{children}</strong>
+    ),
 
-                                    strong: ({
-                                      children,
-                                    }) => (
-                                      <strong>
-                                        {children}
-                                      </strong>
-                                    ),
+    ul: ({ children }) => (
+      <ul>{children}</ul>
+    ),
 
-                                    ul: ({
-                                      children,
-                                    }) => (
-                                      <ul>
-                                        {children}
-                                      </ul>
-                                    ),
+    ol: ({ children }) => (
+      <ol>{children}</ol>
+    ),
 
-                                    ol: ({
-                                      children,
-                                    }) => (
-                                      <ol>
-                                        {children}
-                                      </ol>
-                                    ),
+    li: ({ children }) => (
+      <li>{children}</li>
+    ),
 
-                                    li: ({
-                                      children,
-                                    }) => (
-                                      <li>
-                                        {children}
-                                      </li>
-                                    ),
+    hr: () => (
+      <div className="lesson-divider" />
+    ),
 
-                                    blockquote: ({
-                                      children,
-                                    }) => (
-                                      <blockquote>
-                                        {children}
-                                      </blockquote>
-                                    ),
+    blockquote: ({ children }) => (
+      <blockquote className="lesson-quote">
+        {children}
+      </blockquote>
+    ),
 
-                                    code: ({
-                                      children,
-                                      className,
-                                    }) => {
+    code: ({ children, className }) => (
+      <code className={className}>
+        {children}
+      </code>
+    ),
 
-                                      const isBlock =
-                                        className?.includes(
-                                          "language-"
-                                        );
-
-                                      return isBlock ? (
-                                        <code
-                                          className={
-                                            className
-                                          }
-                                        >
-                                          {children}
-                                        </code>
-                                      ) : (
-                                        <code>
-                                          {children}
-                                        </code>
-                                      );
-                                    },
-
-                                    table: ({
-                                      children,
-                                    }) => (
-                                      <div className="table-wrapper">
-                                        <table>
-                                          {children}
-                                        </table>
-                                      </div>
-                                    ),
-                                  }}
-                                >
-                                  {message.content}
-                                </ReactMarkdown>
+    table: ({ children }) => (
+      <div className="table-wrapper">
+        <table>{children}</table>
+      </div>
+    ),
+  }}
+>
+  {message.content}
+</ReactMarkdown>
 
                               )}
 
