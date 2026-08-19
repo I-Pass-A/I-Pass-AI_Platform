@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
+import CookieNotice from "@/components/CookieNotice";
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -22,6 +23,7 @@ export default function RootLayout({
       <body>
         <AuthProvider>
           {children}
+          <CookieNotice />
         </AuthProvider>
       </body>
     </html>

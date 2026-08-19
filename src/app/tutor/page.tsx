@@ -5,15 +5,17 @@ import { useAuth } from "@/context/AuthContext";
 import Sidebar from "@/components/Sidebar";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { 
-  MessageSquare, 
-  Send, 
-  BookOpen, 
+import TutorResponse from "@/components/TutorResponse";
+import {
+  MessageSquare,
+  Send,
+  BookOpen,
   AlertTriangle, 
   Bot, 
   PlusCircle, 
   History 
 } from "lucide-react";
+import { getSubjectsForGrade } from "@/lib/subjects";
 
 interface Message {
   id?: number;
@@ -35,21 +37,17 @@ export default function TutorPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
   
-  // Subjects mapping based on language / grade
-  const englishSubjects = ["English", "Biology", "Chemistry", "Physics", "Maths"];
-  const oromoSubjects = ["Afaan Oromo", "Saayinsii", "Hawaasummaa", "Herrega"];
-  
-  const [selectedSubject, setSelectedSubject] = useState("");
+  const chatEndRef = useRef<HTMLDivElement>(null);
   const [sessions, setSessions] = useState<SessionInfo[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<number | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
+  const [selectedSubject, setSelectedSubject] = useState("");
   
   const [inputText, setInputText] = useState("");
   const [sending, setSending] = useState(false);
   const [fetchingSessions, setFetchingSessions] = useState(false);
   const [fetchingMessages, setFetchingMessages] = useState(false);
   
-  const chatEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -71,8 +69,9 @@ export default function TutorPage() {
 
   if (loading || !user) return null;
 
-  // Determine subject list based on language
-  const subjects = user.language === "Afaan Oromo" ? oromoSubjects : englishSubjects;
+  // Determine subject list: teachers use their grade_taught, students use their grade
+  const activeGrade = user.role === "teacher" ? (user.grade_taught ?? user.grade) : user.grade;
+  const subjects = getSubjectsForGrade(activeGrade);
   const isAO = user.language === "Afaan Oromo";
 
   // Dynamic Translations (No mixed bilingual labels)
@@ -491,12 +490,17 @@ export default function TutorPage() {
                           </div>
                         )}
                         
-                        <p style={{ fontSize: "0.95rem", lineHeight: 1.6, color: "#fff", margin: 0 }}>
-                          {msg.content}
-                        </p>
+                        {/* Render tutor messages with rich formatting, student messages as plain text */}
+                        {msg.sender === "tutor" ? (
+                          <TutorResponse content={msg.content} />
+                        ) : (
+                          <p style={{ fontSize: "0.95rem", lineHeight: 1.6, color: "#fff", margin: 0 }}>
+                            {msg.content}
+                          </p>
+                        )}
                       </div>
 
-                      {/* Source Citations */}
+                      {/* Source Citations — chapter + page number from structured pipeline */}
                       {!isStudent && msg.sources && msg.sources.length > 0 && (
                         <div style={{
                           display: "flex",
@@ -504,25 +508,67 @@ export default function TutorPage() {
                           gap: "0.35rem",
                           marginTop: "0.4rem"
                         }}>
-                          {msg.sources.map((src, sIdx) => (
-                            <div
-                              key={sIdx}
-                              style={{
-                                display: "flex",
-                                alignItems: "center",
-                                gap: "0.25rem",
-                                fontSize: "0.7rem",
-                                color: "var(--secondary)",
-                                background: "rgba(20, 184, 166, 0.08)",
-                                border: "1px solid rgba(20, 184, 166, 0.15)",
-                                padding: "0.15rem 0.4rem",
-                                borderRadius: "4px"
-                              }}
-                            >
-                              <BookOpen size={10} />
-                              <span>{src.source} ({t.similarityText}: {Math.round(src.similarity * 100)}%)</span>
-                            </div>
-                          ))}
+                          {msg.sources.map((src, sIdx) => {
+                            // Build a rich citation label using new structured fields
+                            const chapterLabel = src.chapter
+                              ? src.chapter.slice(0, 50) + (src.chapter.length > 50 ? "..." : "")
+                              : src.source?.replace(/\.[^.]+$/, ""); // fallback to filename without ext
+
+                            const pageLabel = src.page_number && src.page_number > 0
+                              ? (isAO ? `Fuula ${src.page_number}` : `p.${src.page_number}`)
+                              : null;
+
+                            const typeLabel = src.chunk_type && src.chunk_type !== "text"
+                              ? src.chunk_type
+                              : null;
+
+                            const similarityPct = src.similarity > 0
+                              ? `${Math.round(src.similarity * 100)}%`
+                              : null;
+
+                            return (
+                              <div
+                                key={sIdx}
+                                title={`${src.source}${src.chapter ? ` — ${src.chunk_type}` : ""}`}
+                                style={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: "0.3rem",
+                                  fontSize: "0.7rem",
+                                  color: "var(--secondary)",
+                                  background: "rgba(20, 184, 166, 0.08)",
+                                  border: "1px solid rgba(20, 184, 166, 0.15)",
+                                  padding: "0.2rem 0.5rem",
+                                  borderRadius: "4px",
+                                  maxWidth: "280px",
+                                }}
+                              >
+                                <BookOpen size={10} style={{ flexShrink: 0 }} />
+                                <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                  {chapterLabel}
+                                  {pageLabel && <span style={{ color: "var(--text-muted)", marginLeft: "0.25rem" }}>· {pageLabel}</span>}
+                                  {typeLabel && (
+                                    <span style={{
+                                      marginLeft: "0.3rem",
+                                      background: "rgba(99,102,241,0.15)",
+                                      color: "var(--accent)",
+                                      padding: "0 0.3rem",
+                                      borderRadius: "3px",
+                                      fontSize: "0.65rem",
+                                      textTransform: "capitalize",
+                                    }}>
+                                      {typeLabel}
+                                    </span>
+                                  )}
+                                  {similarityPct && (
+                                    <span style={{ color: "var(--text-muted)", marginLeft: "0.25rem" }}>
+                                      · {similarityPct}
+                                    </span>
+                                  )}
+                                </span>
+                              </div>
+                            );
+                          })}
                         </div>
                       )}
                     </div>

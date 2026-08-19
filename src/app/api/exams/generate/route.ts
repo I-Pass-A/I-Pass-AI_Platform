@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { GoogleGenAI } from "@google/genai";
+import { generateWithFallback } from "@/lib/ai/generate";
 
 export async function POST(req: NextRequest) {
   try {
@@ -36,14 +37,17 @@ export async function POST(req: NextRequest) {
       ai = new GoogleGenAI({ apiKey });
     }
 
+    let embeddingSucceeded = false;
     if (ai) {
       try {
         const embedRes = await ai.models.embedContent({
-          model: "text-embedding-004",
-          contents: topic
+          model: "gemini-embedding-2",
+          contents: topic,
+          config: { outputDimensionality: 1024 }
         });
         if (embedRes.embeddings && embedRes.embeddings[0] && embedRes.embeddings[0].values) {
           queryVector = embedRes.embeddings[0].values;
+          embeddingSucceeded = true;
         }
       } catch (e) {
         console.error("Embedding generation error:", e);
@@ -51,13 +55,15 @@ export async function POST(req: NextRequest) {
     }
 
     if (queryVector.length === 0) {
-      queryVector = Array.from({ length: 1536 }, (_, idx) => Math.sin(topic.length + idx) * 0.1);
+      queryVector = Array.from({ length: 1024 }, (_, idx) => Math.sin(topic.length + idx) * 0.1);
     }
 
-    const { data: chunks, error: rpcErr } = await supabaseAdmin.rpc("match_chunks", {
+    const matchThreshold = embeddingSucceeded ? 0.5 : 0.1;
+
+    const { data: rawChunks, error: rpcErr } = await supabaseAdmin.rpc("match_chunks", {
       query_embedding: queryVector,
-      match_threshold: 0.1,
-      match_count: 5,
+      match_threshold: matchThreshold,
+      match_count: 8,
       filter_subject: subject,
       filter_grade: gradeBand,
       filter_language: language
@@ -67,7 +73,45 @@ export async function POST(req: NextRequest) {
       console.error("match_chunks RPC failed:", rpcErr);
     }
 
-    const contextBlock = (chunks || []).map((c: any) => c.content).join("\n---\n");
+    // Neighbor expansion — pull chunk before/after each match so exam questions
+    // aren't based on a concept that was split across a chunk boundary
+    let chunks = rawChunks || [];
+
+    if (chunks.length > 0) {
+      const seen = new Set(chunks.map((c: any) => c.id));
+      const neighborPromises = chunks.map((c: any) =>
+        supabaseAdmin
+          .from("curriculum_chunks")
+          .select("id, subject, topic, grade, language, source_document, content, chunk_index")
+          .eq("source_document", c.source_document)
+          .in("chunk_index", [c.chunk_index - 1, c.chunk_index + 1])
+      );
+      const neighborResults = await Promise.all(neighborPromises);
+      for (const result of neighborResults) {
+        for (const neighbor of result.data || []) {
+          if (!seen.has(neighbor.id)) {
+            seen.add(neighbor.id);
+            chunks.push({ ...neighbor, similarity: 0.0 });
+          }
+        }
+      }
+      // Keep natural reading order
+      chunks.sort((a: any, b: any) => {
+        if (a.source_document !== b.source_document)
+          return a.source_document.localeCompare(b.source_document);
+        return (a.chunk_index ?? 0) - (b.chunk_index ?? 0);
+      });
+    }
+
+    const contextBlock = chunks.map((c: any) => c.content).join("\n---\n");
+
+    // Guard: only block when embedding actually worked AND no chunks found.
+    // If embedding failed (quota exhausted), allow through with fallback context.
+    if (chunks.length === 0 && embeddingSucceeded && ai) {
+      return NextResponse.json({
+        detail: `No curriculum materials found for ${subject} (Grade ${gradeBand}). Please ask an administrator to upload the ${subject} textbook through the Admin Panel before generating exams.`
+      }, { status: 422 });
+    }
 
     let questions: any[] = [];
     let answerKey: any[] = [];
@@ -92,6 +136,7 @@ export async function POST(req: NextRequest) {
           });
           mockAnswerKey.push({
             id: qId,
+            type: t,
             correct_answer: language === "Afaan Oromo" ? "Filannoo A" : "Option A",
             explanation: language === "Afaan Oromo" ? "Ibsa: Filannoon A caasaa barumsaatiin sirriidha." : "Explanation: Option A is correct based on the curriculum."
           });
@@ -106,6 +151,7 @@ export async function POST(req: NextRequest) {
           });
           mockAnswerKey.push({
             id: qId,
+            type: t,
             correct_answer: language === "Afaan Oromo" ? "Dhugaa" : "True",
             explanation: language === "Afaan Oromo" ? "Ibsa: Eeyyee, yaadni kun dhugaa dha." : "Explanation: Yes, this fact is verified."
           });
@@ -119,6 +165,7 @@ export async function POST(req: NextRequest) {
           });
           mockAnswerKey.push({
             id: qId,
+            type: t,
             correct_answer: language === "Afaan Oromo" ? "caasaa" : "essential",
             explanation: language === "Afaan Oromo" ? "Jechi kun iddoo duudaa sirriitti guuta." : "This fits the statement model."
           });
@@ -132,6 +179,7 @@ export async function POST(req: NextRequest) {
           });
           mockAnswerKey.push({
             id: qId,
+            type: t,
             correct_answer: language === "Afaan Oromo" ? `Hiika ${topic}` : `Definition of ${topic}`,
             explanation: language === "Afaan Oromo" ? "Hiikni kun yaada guutuu ibsuu qaba." : "The definition must cover the main curriculum concept."
           });
@@ -141,67 +189,55 @@ export async function POST(req: NextRequest) {
       questions = mockQuestions;
       answerKey = mockAnswerKey;
     } else {
-      const systemInstruction = `
-You are an expert curriculum test designer. Generate a school exam for Grade ${grade} students in ${subject}.
-The exam must be generated entirely in the instruction language: ${language}.
-Format the output as a strict JSON object with two fields: 'questions' and 'answer_key'.
-Ensure questions are:
-- Strictly grounded in the provided curriculum context. Do not ask general knowledge questions that are not mentioned or implied by the context.
-- Age-appropriate (Grade ${grade} level).
-- Generate ONLY the following question types: ${allowedTypes.join(", ")}.
-- Guidelines for question types:
-  - 'multiple_choice': Provide a 'question_text' and 'options' (array of exactly 4 choices).
-  - 'true_false': Provide a 'question_text' and 'options' (array of exactly 2 choices: ["True", "False"] in English, or ["Dhugaa", "Soba"] in Afaan Oromo).
-  - 'blank_space': Provide a 'question_text' (use blank underscores). Do NOT provide 'options'.
-  - 'definition': Provide a 'question_text' asking to define or explain a term. Do NOT provide 'options'.
-`;
+      const systemInstruction = `You are an expert curriculum test designer for Ethiopian Grade ${grade} ${subject}.
+Generate exams ONLY from the provided curriculum context. Output valid JSON only.
+Language: ${language}. Never include content outside the curriculum context.`;
 
-      const prompt = `
-Curriculum Context:
+      const prompt = `Curriculum Context:
 ${contextBlock}
 
-Exam Request:
-- Subject: ${subject}
-- Topic: ${topic}
-- Difficulty: ${difficulty}
-- Language: ${language}
-- Question Types: ${allowedTypes.join(", ")}
-- Number of questions: 6 (distributed evenly among the requested types)
+Generate a ${difficulty} difficulty exam for Grade ${grade} ${subject}.
+Topic: ${topic}
+Language: ${language}
+Question types: ${allowedTypes.join(", ")}
+Number of questions: 6 (distributed evenly across requested types)
 
-Generate the exam. Output MUST be valid JSON matching this schema:
+Output ONLY this JSON structure:
 {
   "questions": [
     {
       "id": 1,
       "type": "multiple_choice" | "true_false" | "blank_space" | "definition",
-      "question_text": "text of the question",
-      "options": ["choice 1", "choice 2", ...] // Only include if type is 'multiple_choice' or 'true_false'
+      "question_text": "...",
+      "options": ["A","B","C","D"]  // only for multiple_choice and true_false
     }
   ],
   "answer_key": [
     {
       "id": 1,
-      "correct_answer": "expected correct option, word, or explanation summary",
-      "explanation": "step-by-step explanation why this is correct in ${language}"
+      "type": "multiple_choice" | "true_false" | "blank_space" | "definition",
+      "correct_answer": "...",
+      "explanation": "step-by-step explanation in ${language}"
     }
   ]
-}
-`;
+}`;
+
       try {
-        const response = await ai.models.generateContent({
-          model: "gemini-2.5-flash",
-          contents: prompt,
-          config: {
-            systemInstruction,
-            responseMimeType: "application/json"
-          }
+        const raw = await generateWithFallback({
+          prompt,
+          systemInstruction,
+          jsonMode: true,
         });
-        const data = JSON.parse(response.text || "{}");
+        const data = JSON.parse(raw || "{}");
         questions = data.questions;
         answerKey = data.answer_key;
       } catch (err: any) {
         console.error("AI exam generation failed:", err);
-        return NextResponse.json({ detail: `AI Exam generation failed: ${err.message}` }, { status: 500 });
+        return NextResponse.json({
+          detail: err.message === "AI_UNAVAILABLE"
+            ? "AI service temporarily unavailable. Please try again in a moment."
+            : `Exam generation failed: ${err.message}`
+        }, { status: 503 });
       }
     }
 
