@@ -8,3 +8,11 @@ build/
 __pycache__/
 .DS_Store
 Thumbs.db
+
+# Large files and uploads
+scripts/textbooks/
+*.pdf
+*.docx
+eng.traineddata
+scripts/bio_extracted_*.jpg
+scripts/test_math_img.png
