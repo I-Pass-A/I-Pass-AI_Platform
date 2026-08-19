@@ -2,13 +2,17 @@
 
 import React from "react";
 import { useAuth } from "@/context/AuthContext";
-import { 
-  MessageSquare, 
-  Award, 
-  Shield, 
-  LogOut, 
-  GraduationCap, 
-  Globe 
+import {
+  MessageSquare,
+  Award,
+  Shield,
+  LogOut,
+  GraduationCap,
+  Globe,
+  LayoutDashboard,
+  BookOpen,
+  History,
+  Eye,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -35,25 +39,51 @@ export default function Sidebar() {
     }
   };
 
+  const isAO = user.language === "Afaan Oromo";
+
   const navItems = [
     {
-      name: "AI Tutor",
+      name: isAO ? "Fuula Jalqabaa" : "Dashboard",
+      path: "/dashboard",
+      icon: LayoutDashboard,
+      roles: ["student", "teacher", "admin", "director"]
+    },
+    {
+      name: isAO ? "Barsiisaa AI" : "AI Tutor",
       path: "/tutor",
       icon: MessageSquare,
       roles: ["student", "teacher", "admin"]
     },
     {
-      name: "Exam Prep",
+      name: isAO ? "Qophii Qormaataa" : "Exam Centre",
       path: "/exams",
       icon: Award,
       roles: ["student", "teacher", "admin"]
     },
     {
-      name: "Admin Panel",
+      name: isAO ? "Bu'aa Qormaataa" : "My Results",
+      path: "/results",
+      icon: History,
+      roles: ["student"]
+    },
+    {
+      name: isAO ? "Kuusaa Barnootaa" : "Curriculum",
+      path: "/admin",
+      icon: BookOpen,
+      roles: ["teacher"]
+    },
+    {
+      name: isAO ? "Bulchiinsa" : "Admin Panel",
       path: "/admin",
       icon: Shield,
-      roles: ["teacher", "admin"]
-    }
+      roles: ["admin"]
+    },
+    {
+      name: isAO ? "To'annoo Guutuu" : "Director View",
+      path: "/director",
+      icon: Eye,
+      roles: ["director"]
+    },
   ];
 
   return (
@@ -149,15 +179,10 @@ export default function Sidebar() {
           .map((item) => {
             const Icon = item.icon;
             const isActive = pathname.startsWith(item.path);
-            const displayName = item.path === "/tutor" 
-              ? "AI Tutor" 
-              : item.path === "/exams" 
-                ? (user.language === "Afaan Oromo" ? "Qophii Qormaataa" : "Exam Prep") 
-                : (user.language === "Afaan Oromo" ? "Bulchiinsa" : "Admin Panel");
                 
             return (
               <Link 
-                key={item.path} 
+                key={item.path + item.name} 
                 href={item.path}
                 style={{
                   display: "flex",
@@ -176,7 +201,7 @@ export default function Sidebar() {
                 className={!isActive ? "glass-panel-hover" : ""}
               >
                 <Icon size={18} style={{ color: isActive ? "var(--primary)" : "inherit" }} />
-                {displayName}
+                {item.name}
               </Link>
             );
           })}
@@ -210,30 +235,46 @@ export default function Sidebar() {
               {user.name}
             </h4>
             <span style={{ fontSize: "0.75rem", color: "var(--text-secondary)", textTransform: "capitalize" }}>
-              {user.role === "student" 
-                ? (user.language === "Afaan Oromo" ? "Barataa" : "Student") 
-                : user.role === "teacher" 
-                  ? (user.language === "Afaan Oromo" ? "Barsiisaa" : "Teacher") 
-                  : (user.language === "Afaan Oromo" ? "Bulchaa" : "Administrator")}
+              {user.role === "student"
+                ? (isAO ? "Barataa" : "Student")
+                : user.role === "teacher"
+                  ? (isAO ? "Barsiisaa" : "Teacher")
+                  : user.role === "director"
+                    ? (isAO ? "Hogganaa" : "Director")
+                    : (isAO ? "Bulchaa" : "Administrator")}
             </span>
           </div>
         </div>
-        <button 
+        <button
           onClick={logout}
-          className="btn btn-outline"
           style={{
             width: "100%",
-            padding: "0.5rem",
+            padding: "0.6rem 1rem",
             fontSize: "0.85rem",
+            fontFamily: "var(--font-outfit)",
+            fontWeight: 600,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
             gap: "0.5rem",
-            borderColor: "rgba(239, 68, 110, 0.2)",
-            color: "var(--danger)"
+            background: "rgba(239, 68, 68, 0.08)",
+            border: "1px solid rgba(239, 68, 68, 0.25)",
+            borderRadius: "var(--radius-sm)",
+            color: "var(--danger)",
+            cursor: "pointer",
+            transition: "all var(--transition-fast)",
+          }}
+          onMouseEnter={e => {
+            e.currentTarget.style.background = "rgba(239,68,68,0.15)";
+            e.currentTarget.style.borderColor = "rgba(239,68,68,0.45)";
+          }}
+          onMouseLeave={e => {
+            e.currentTarget.style.background = "rgba(239,68,68,0.08)";
+            e.currentTarget.style.borderColor = "rgba(239,68,68,0.25)";
           }}
         >
-          <LogOut size={14} /> {user.language === "Afaan Oromo" ? "Ba'i" : "Log Out"}
+          <LogOut size={15} />
+          {user.language === "Afaan Oromo" ? "Ba'i" : "Log Out"}
         </button>
       </div>
     </aside>

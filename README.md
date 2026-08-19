@@ -2,11 +2,11 @@
   <img src="public/logo.png" alt="I-Pass-A Logo" width="160" style="border-radius: 16px;" />
 </p>
 
-# 🎓 I-Pass-A: AI-Powered Tutor & Sample Exam Prep 🚀
+# 🎓 I-Pass-A: AI-Powered Tutor & National Exam Prep (Grades 6, 8, and 12) 🚀
 
-**I-Pass-A** is an advanced AI-powered tutor and practice exam preparation web platform designed for Grades 6, 8 and 12. It delivers curriculum-grounded learning across all subjects:
-- **Grades 12**: Delivered in **English**.
-- **Grades 6 & 8**: Delivered in **Afaan Oromo**.
+**I-Pass-A** is an advanced AI-powered tutor and practice national exam preparation web platform designed for **Grades 6, 8, and 12**. It enables students to prepare for high-stakes examinations with curriculum-grounded learning:
+- **Grade 12**: Delivered in **English** 🇬🇧.
+- **Grades 6 & 8**: Delivered in **Afaan Oromo** 🌳.
 
 This platform utilizes a serverless unified **Next.js + Supabase** stack:
 - **🔐 Supabase Auth**: Production-grade role-based user authentication.
@@ -35,11 +35,16 @@ I-Pass-A/
 │   │   ├── layout.tsx       # 📐 App layout wrapper with viewport configuration
 │   │   └── page.tsx         # 🔑 Landing hero page and auth form
 │   ├── components/
-│   │   └── Sidebar.tsx      # 🧭 Navigation and Grade/Language switcher
+│   │   └── Sidebar.tsx      # 🧭 Navigation and Grade/Language settings
 │   ├── context/
 │   │   └── AuthContext.tsx  # 🔐 Session listener connecting to Supabase Auth
 │   └── lib/
 │       └── supabase.ts      # ⚙️ Connectors with local localStorage fallback DB
+├── backend_app/             # 🐍 Python backend structure
+│   ├── main.py              # 🚀 FastAPI application setup
+│   ├── models/              # 🗂️ Data schemas
+│   └── services/            # ⚙️ Python service engines (tutor, exams, vectors)
+├── server.py                # 📡 Standalone zero-dependency Python backup server
 ├── supabase/
 │   ├── schema.sql           # 🗄️ SQL script for vector extensions, tables, and triggers
 │   └── seed.js              # 🌱 Seeding script for mock curriculum database
@@ -79,20 +84,20 @@ I-Pass-A/
    ```
 
 4. Open `.env.local` in your editor and input the values found in your Supabase project settings (**Settings > API**):
-   - `NEXT_PUBLIC_SUPABASE_URL`: Your Project URL
+   - `NEXT_PUBLIC_SUPABASE_URL`: Your Project URL (e.g. `https://yrhaqfvqmkifnpjwdpnd.supabase.co`)
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY`: Your Anon public API key
-   - `SUPABASE_SERVICE_ROLE_KEY`: Your secret service role key (required for server-side seeding and to bypass RLS)
+   - `SUPABASE_SERVICE_ROLE_KEY`: Your secret service role key
    - `GEMINI_API_KEY`: Your Google Gemini API key (optional; if omitted, RAG searches and exams use local mock fallbacks)
 
 ---
 
 ### 3️⃣ Step 3: Seed the Database 🌱
 
-Seed your Supabase PostgreSQL database with mock curriculum chunks for English (Grades 9–12) and Afaan Oromo (Grades 1–8):
+Seed your Supabase PostgreSQL database with mock curriculum chunks for English, Biology, Chemistry, Afaan Oromo, Saayinsii, and Hawaasummaa:
 ```bash
 node supabase/seed.js
 ```
-*Note: Ensure your `.env.local` (specifically `SUPABASE_SERVICE_ROLE_KEY`) is configured correctly before running.*
+*Note: Ensure your `.env.local` is configured correctly before running.*
 
 ---
 
@@ -108,7 +113,7 @@ Open your browser and navigate to **`http://localhost:3000`**.
 
 ## 🌟 Key Features Walkthrough
 
-1. **🔐 Authentication**: Register and sign in directly from the welcome screen. Student grade bands, roles, and language profiles sync automatically to your Supabase `profiles` table.
-2. **💬 Conversational AI Tutor**: Ask questions in Afaan Oromo (Grades 1–8) or English (Grades 9–12). The RAG pipeline fetches textbook snippets, displays citation sources, and answers step-by-step.
-3. **📝 Practice Exam Prep**: Generate custom tests on any topic or chapter. Supports multiple-choice, true/false, fill-in-the-blank, and definition question formats. Click **Print / Export** to export clean, printer-friendly test sheets!
+1. **🔐 Authentication**: Register and sign in directly from the welcome screen. The role is automatically mapped, and the grade is set to Grade 6 (Afaan Oromo), Grade 8 (Afaan Oromo), or Grade 12 (English).
+2. **💬 Conversational AI Tutor**: Study in Afaan Oromo for Grades 6 & 8, or English for Grade 12. The RAG pipeline fetches textbook snippets, displays citation sources, and answers step-by-step.
+3. **📝 National Exam Prep**: Generate custom tests on any Grade 6, 8, or 12 topic. Supports multiple-choice, true/false, fill-in-the-blank, and definition question formats. Click **Print / Export** to export clean, printer-friendly test sheets!
 4. **⚙️ Admin Dashboard**: Teachers and administrators can upload curriculum textbooks. Text is parsed, split into overlaps, embedded via Gemini, and saved to the vector database with an audit uploader trail.

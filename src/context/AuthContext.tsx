@@ -7,8 +7,9 @@ import { Session, User as SupabaseUser } from "@supabase/supabase-js";
 interface Profile {
   id: string;
   name: string;
-  role: string; // student, teacher, admin
+  role: string; // student, teacher, admin, director
   grade: string | null;
+  grade_taught: string | null;
   language: string;
 }
 

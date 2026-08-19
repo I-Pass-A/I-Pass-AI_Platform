@@ -38,12 +38,12 @@ const MOCK_CHUNKS = [
     content: "The Present Perfect Tense is used to describe an action that happened at an indefinite time in the past or began in the past and continues in the present. It is formed using 'have/has' + past participle (e.g., 'I have lived in Adama for five years'). In contrast, the Past Simple Tense is used for actions completed at a specific time in the past (e.g., 'I lived in Adama in 2021'). Common markers for present perfect include 'already', 'yet', 'since', and 'for', while past simple uses 'yesterday', 'ago', and 'last year'."
   },
   {
-    subject: "Biology",
-    topic: "Cell Structure",
-    grade: "12",
-    language: "English",
-    source_document: "Grade10_Biology_Unit2.pdf",
-    content: "The cell is the basic structural and functional unit of life. Animal cells and plant cells have key differences. Plant cells have a rigid cell wall made of cellulose, chloroplasts for photosynthesis, and a large central vacuole for turgor pressure. Animal cells lack cell walls and chloroplasts, and typically have smaller, temporary vacuoles. Both cell types share common organelles like the nucleus (which houses DNA), mitochondria (the powerhouses generating ATP energy), ribosomes (sites of protein synthesis), and the cell membrane (regulating entry and exit of materials)."
+    subject: "Hawaasummaa",
+    topic: "Seenaa Adama",
+    grade: "8",
+    language: "Afaan Oromo",
+    source_document: "Kutaa8_Hawaasummaa_Adama.txt",
+    content: "Magaalaan Adaamaa wiirtuu daldalaa fi geejjibaa Oromiyaa keessatti iddoo guddaa qabdu dha. Bara 1915 keessa ijaarama babal'achuu kan jalqabde yoo ta'u, sababa daandii baaburaa Finfinnee irraa gara Jibutitti diriireeni. Adaamaan maqaa 'Naazireet' jedhamuunis waggoota hedduuf waamamaa turte, haa ta'u malee maqaa durii fi hawaasummaa ishee 'Adaamaa' jedhu deebifattee jirti. Magaalittiin misooma Smart City fi indaastiriitiin saffisaan guddachaa jirti."
   },
   {
     subject: "Chemistry",

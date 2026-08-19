@@ -1,10 +1,42 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { GoogleGenAI } from "@google/genai";
+import { createClient } from "@supabase/supabase-js";
 
 export async function POST(req: NextRequest) {
   // Move require inside POST to prevent evaluation crash (DOMMatrix is not defined) during Next.js build time
   const pdf = require("pdf-parse");
+
+  // --- Server-side role check: only admins may upload curriculum ---
+  const authHeader = req.headers.get("authorization");
+  const accessToken = authHeader?.replace("Bearer ", "").trim();
+
+  if (
+    accessToken &&
+    process.env.NEXT_PUBLIC_SUPABASE_URL &&
+    process.env.NEXT_PUBLIC_SUPABASE_URL !== "https://placeholder-project-id.supabase.co"
+  ) {
+    const supabaseUser = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
+    const { data: { user }, error: userErr } = await supabaseUser.auth.getUser(accessToken);
+    if (userErr || !user) {
+      return NextResponse.json({ detail: "Unauthorized" }, { status: 401 });
+    }
+    // Check role in profiles table
+    const supabaseAdmin = getSupabaseAdmin();
+    const { data: profile } = await supabaseAdmin
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .single();
+
+    if (!profile || profile.role !== "admin") {
+      return NextResponse.json({ detail: "Forbidden: only administrators can upload curriculum materials." }, { status: 403 });
+    }
+  }
+  // In mock/dev mode (no real Supabase configured) the check is skipped so local dev still works
 
   try {
     const formData = await req.formData();
@@ -66,8 +98,9 @@ export async function POST(req: NextRequest) {
       if (ai) {
         try {
           const embedRes = await ai.models.embedContent({
-            model: "text-embedding-004",
-            contents: chunkText
+            model: "gemini-embedding-2",
+            contents: chunkText,
+            config: { outputDimensionality: 1024 }
           });
           if (embedRes.embeddings && embedRes.embeddings[0] && embedRes.embeddings[0].values) {
             embedding = embedRes.embeddings[0].values;
@@ -79,7 +112,7 @@ export async function POST(req: NextRequest) {
 
       // If embedding failed or no key, generate mock deterministic vector
       if (embedding.length === 0) {
-        embedding = Array.from({ length: 1536 }, (_, idx) => 
+        embedding = Array.from({ length: 1024 }, (_, idx) => 
           Math.sin(chunkText.length + idx) * 0.1
         );
       }

@@ -5,6 +5,9 @@ import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { GraduationCap, Mail, Lock, User as UserIcon, BookOpen, ChevronRight, Globe, Award } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import TermsAcceptance from "@/components/TermsAcceptance";
+import Link from "next/link";
+import Footer from "@/components/Footer";
 
 export default function Home() {
   const { user, loading } = useAuth();
@@ -18,14 +21,23 @@ export default function Home() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState("student");
-  const [grade, setGrade] = useState("12");
+  const [grade, setGrade] = useState("12");         // student's grade
+  const [gradeTaught, setGradeTaught] = useState("12"); // teacher's grade
   
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(false);
+
+  // Forgot password state
+  const [showForgot, setShowForgot] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [forgotSent, setForgotSent] = useState(false);
+  const [forgotSubmitting, setForgotSubmitting] = useState(false);
+  const [forgotError, setForgotError] = useState("");
 
   useEffect(() => {
     if (!loading && user) {
-      router.push("/tutor");
+      router.push(user.role === "director" ? "/director" : "/dashboard");
     }
   }, [user, loading, router]);
 
@@ -59,6 +71,23 @@ export default function Home() {
     );
   }
 
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setForgotError("");
+    setForgotSubmitting(true);
+    try {
+      const { error: resetErr } = await supabase.auth.resetPasswordForEmail(forgotEmail, {
+        redirectTo: `${window.location.origin}/auth/callback?type=recovery`,
+      });
+      if (resetErr) throw resetErr;
+      setForgotSent(true);
+    } catch (err: any) {
+      setForgotError(err.message || (lang === "EN" ? "Failed to send reset email." : "Email erguu hin danda'amne."));
+    } finally {
+      setForgotSubmitting(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
@@ -78,9 +107,10 @@ export default function Home() {
           options: {
             data: {
               name,
-              role,
-              grade: role === "student" ? grade : null,
-              language: role === "student" && parseInt(grade) <= 8 ? "Afaan Oromo" : "English"
+              role: "student",
+              grade,
+              grade_taught: null,
+              language: parseInt(grade) <= 8 ? "Afaan Oromo" : "English",
             }
           }
         });
@@ -98,7 +128,7 @@ export default function Home() {
         return;
       }
       
-      router.push("/tutor");
+      router.push("/dashboard");
     } catch (err: any) {
       setError(
         err.message || 
@@ -116,7 +146,7 @@ export default function Home() {
       ? "AI-Powered Tutoring & Smart Exam Preparation" 
       : "Barumsa AI fi Qophii Qormaataa Saffisaa",
     desc: lang === "EN"
-      ? "Empowering students in Grades 6, 8, and 12 with personalized AI learning. Study in English (Grade 12) or Afaan Oromo (Grades 6 & 8) with curriculum-grounded tutoring and practice exams."
+      ? "Empowering students in Grades 6, 8, and 12 with personalized AI learning. Study in English (Grade 12) or Afaan Oromo (Grades 6 & 8) with curriculum-grounded tutoring and national exam preparation."
       : "Barattoota Kutaa 6, 8, fi 12 barumsa AI dhuunfaatiin gahoomsuu. Barnoota kee Ingiliffaan (Kutaa 12) ykn Afaan Oromootiin (Kutaa 6 & 8) qorannoo qormaataa fi tutor-gochaan baradhu.",
     discover: lang === "EN" ? "Discover the Platform" : "Platformii Argadhu",
     statStudents: lang === "EN" ? "12,500+ Active Students" : "Barattoota 12,500+ Ol",
@@ -133,12 +163,24 @@ export default function Home() {
     roleStudent: lang === "EN" ? "Student" : "Barataa",
     roleTeacher: lang === "EN" ? "Teacher" : "Barsiisaa",
     roleAdmin: lang === "EN" ? "Content Administrator" : "Bulchaa Curriculum",
-    gradeLabel: lang === "EN" ? "Select Grade" : "Kutaa Filadhu",
+    gradeLabel: lang === "EN" ? "Your Grade" : "Kutaa Kee",
+    gradeTaughtLabel: lang === "EN" ? "Grade You Teach" : "Kutaa Barsiiftu",
     signInBtn: lang === "EN" ? "Sign In" : "Seeni",
     signUpBtn: lang === "EN" ? "Sign Up" : "Galmaa'i",
     haveAccount: lang === "EN" ? "Already have an account?" : "Hera qabduu?",
     noAccount: lang === "EN" ? "Don't have an account?" : "Hera hin qabduu?",
-    backBtn: lang === "EN" ? "Back" : "Gara Dubaatti"
+    backBtn: lang === "EN" ? "Back" : "Gara Dubaatti",
+    forgotPass: lang === "EN" ? "Forgot password?" : "Jecha iccitii dagatte?",
+    forgotTitle: lang === "EN" ? "Reset Password" : "Jecha Iccitii Haaromsi",
+    forgotDesc: lang === "EN"
+      ? "Enter your email and we'll send you a reset link."
+      : "Email keessan galchaa, link haaromsuu isinii erga.",
+    forgotBtn: lang === "EN" ? "Send Reset Link" : "Link Ergi",
+    forgotSentTitle: lang === "EN" ? "Check your email" : "Email keessan ilaali",
+    forgotSentDesc: lang === "EN"
+      ? "A password reset link has been sent. Check your inbox and spam folder."
+      : "Link haaromsuu ergiameera. Inbox fi spam keessan ilaali.",
+    backToLogin: lang === "EN" ? "Back to Sign In" : "Gara Seensaatti Deebi'i",
   };
 
   return (
@@ -248,7 +290,7 @@ export default function Home() {
                 marginTop: "1.5rem"
               }}>
                 {[
-                  { label: t.statStudents, desc: lang === "EN" ? "Preparing for Grades 6, 8, & 12" : "Qophii Qormaata Kutaa 6, 8, fi 12" },
+                  { label: t.statStudents, desc: lang === "EN" ? "Preparing for Grades 6, 8, & 12 Exams" : "Qophii Qormaata Kutaa 6, 8, fi 12" },
                   { label: t.statExams, desc: lang === "EN" ? "Mock and practice tests taken" : "Qormaanni mock fudhatame" },
                   { label: t.statSchools, desc: lang === "EN" ? "Schools using platform features" : "Manneen barumsaa itti fayyadaman" }
                 ].map((stat, idx) => (
@@ -300,6 +342,55 @@ export default function Home() {
               >
                 ← {t.backBtn}
               </button>
+
+              {/* Forgot password modal overlay */}
+              {showForgot && (
+                <div style={{ position: "absolute", inset: 0, background: "rgba(6,11,25,0.92)", borderRadius: "var(--radius-md)", zIndex: 10, display: "flex", flexDirection: "column", justifyContent: "center", padding: "2rem" }}
+                  className="animate-fade-in">
+                  <h3 style={{ fontSize: "1.3rem", fontWeight: 700, marginBottom: "0.35rem" }}>{t.forgotTitle}</h3>
+                  <p style={{ color: "var(--text-secondary)", fontSize: "0.85rem", marginBottom: "1.5rem" }}>{t.forgotDesc}</p>
+
+                  {forgotSent ? (
+                    <div style={{ textAlign: "center", padding: "1.5rem 1rem" }}>
+                      <div style={{ fontSize: "2.5rem", marginBottom: "0.75rem" }}>📧</div>
+                      <h4 style={{ fontWeight: 700, marginBottom: "0.35rem" }}>{t.forgotSentTitle}</h4>
+                      <p style={{ color: "var(--text-secondary)", fontSize: "0.85rem", marginBottom: "1.5rem" }}>{t.forgotSentDesc}</p>
+                      <button onClick={() => { setShowForgot(false); setForgotSent(false); setForgotEmail(""); }} className="btn btn-outline" style={{ width: "100%" }}>
+                        {t.backToLogin}
+                      </button>
+                    </div>
+                  ) : (
+                    <form onSubmit={handleForgotPassword}>
+                      {forgotError && (
+                        <div style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", color: "var(--danger)", padding: "0.65rem 0.9rem", borderRadius: "var(--radius-sm)", fontSize: "0.82rem", marginBottom: "1rem" }}>
+                          {forgotError}
+                        </div>
+                      )}
+                      <div className="form-group">
+                        <label className="form-label">{t.emailLabel}</label>
+                        <div style={{ position: "relative" }}>
+                          <Mail size={16} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)" }} />
+                          <input
+                            type="email"
+                            className="form-input"
+                            placeholder="name@school.com"
+                            required
+                            value={forgotEmail}
+                            onChange={(e) => setForgotEmail(e.target.value)}
+                            style={{ width: "100%", paddingLeft: "2.5rem" }}
+                          />
+                        </div>
+                      </div>
+                      <button type="submit" className="btn btn-primary" disabled={forgotSubmitting} style={{ width: "100%", marginBottom: "0.75rem" }}>
+                        {forgotSubmitting ? "Sending..." : t.forgotBtn}
+                      </button>
+                      <button type="button" onClick={() => { setShowForgot(false); setForgotError(""); }} className="btn btn-outline" style={{ width: "100%", fontSize: "0.85rem" }}>
+                        {t.backToLogin}
+                      </button>
+                    </form>
+                  )}
+                </div>
+              )}
 
               <h3 style={{ fontSize: "1.5rem", fontWeight: 700, marginBottom: "0.25rem", marginTop: "1rem", textAlign: "center" }}>
                 {isLogin ? t.welcomeBack : t.createAcc}
@@ -372,46 +463,63 @@ export default function Home() {
                       style={{ width: "100%", paddingLeft: "2.5rem" }}
                     />
                   </div>
+                  {isLogin && (
+                    <button
+                      type="button"
+                      onClick={() => { setShowForgot(true); setForgotEmail(email); setForgotError(""); setForgotSent(false); }}
+                      style={{ background: "none", border: "none", color: "var(--primary)", fontSize: "0.8rem", cursor: "pointer", padding: "0.25rem 0", textAlign: "right", width: "100%", marginTop: "0.25rem" }}
+                    >
+                      {t.forgotPass}
+                    </button>
+                  )}
                 </div>
 
                 {!isLogin && (
                   <>
-                    <div className="form-group">
-                      <label className="form-label">{t.roleLabel}</label>
+                    {/* Grade — students only, no role selector needed */}
+                    <div className="form-group animate-fade-in">
+                      <label className="form-label" style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
+                        <GraduationCap size={14} /> {t.gradeLabel}
+                      </label>
                       <select
                         className="form-select"
-                        value={role}
-                        onChange={(e) => setRole(e.target.value)}
+                        value={grade}
+                        onChange={(e) => setGrade(e.target.value)}
                         style={{ width: "100%" }}
                       >
-                        <option value="student">{t.roleStudent}</option>
-                        <option value="teacher">{t.roleTeacher}</option>
-                        <option value="admin">{t.roleAdmin}</option>
+                        <option value="6">{lang === "EN" ? "Grade 6" : "Kutaa 6"} — Afaan Oromo</option>
+                        <option value="8">{lang === "EN" ? "Grade 8" : "Kutaa 8"} — Afaan Oromo</option>
+                        <option value="12">{lang === "EN" ? "Grade 12" : "Kutaa 12"} — English</option>
                       </select>
+                      <span style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginTop: "0.25rem" }}>
+                        {lang === "EN"
+                          ? (parseInt(grade) <= 8 ? "Instruction language: Afaan Oromo" : "Instruction language: English")
+                          : (parseInt(grade) <= 8 ? "Afaan barumsa: Afaan Oromo" : "Afaan barumsa: Ingiliffaa")}
+                      </span>
                     </div>
 
-                    {role === "student" && (
-                      <div className="form-group animate-fade-in">
-                        <label className="form-label">{t.gradeLabel}</label>
-                        <select
-                          className="form-select"
-                          value={grade}
-                          onChange={(e) => setGrade(e.target.value)}
-                          style={{ width: "100%" }}
-                        >
-                          {["6", "8", "12"].map((g) => (
-                            <option key={g} value={g}>Grade {g}</option>
-                          ))}
-                        </select>
-                      </div>
-                    )}
+                    {/* Staff notice */}
+                    <div style={{ fontSize: "0.78rem", color: "var(--text-muted)", textAlign: "center", marginTop: "0.5rem", padding: "0.5rem 0.75rem", background: "rgba(255,255,255,0.03)", borderRadius: "var(--radius-sm)", border: "1px solid var(--glass-border)" }}>
+                      {lang === "EN"
+                        ? "Teachers, admins and directors use pre-assigned credentials — contact your school."
+                        : "Barsiisaan, bulchaan fi hogganaan odeeffannoo duraan kennameef fayyadamu."}
+                    </div>
+
+                    {/* Terms acceptance — signup only */}
+                    <div style={{ marginTop: "1rem" }}>
+                      <TermsAcceptance
+                        accepted={termsAccepted}
+                        onChange={setTermsAccepted}
+                        lang={lang}
+                      />
+                    </div>
                   </>
                 )}
 
                 <button
                   type="submit"
                   className="btn btn-primary"
-                  disabled={submitting}
+                  disabled={submitting || (!isLogin && !termsAccepted)}
                   style={{ width: "100%", marginTop: "1rem" }}
                 >
                   {submitting ? "..." : isLogin ? t.signInBtn : t.signUpBtn}
@@ -428,6 +536,7 @@ export default function Home() {
                 <button
                   onClick={() => {
                     setIsLogin(!isLogin);
+                    setTermsAccepted(false);
                     setError("");
                   }}
                   style={{
@@ -447,6 +556,10 @@ export default function Home() {
 
         </div>
       </div>
+
+      {/* Show full footer only on hero state */}
+      {viewState === "hero" && <Footer />}
+
     </main>
   );
 }
