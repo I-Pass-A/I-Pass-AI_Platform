@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/context/AuthContext";
 import Sidebar from "@/components/Sidebar";
+import AuthGuard from "@/components/AuthGuard";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import {
@@ -423,36 +424,41 @@ export default function ExamsPage() {
   // If taking an exam from saved list or from assignment, show ExamTaker full-screen
   if (takingExam) {
     return (
-      <div className="app-container"><Sidebar />
-        <main className="main-content" style={{ display: "flex", flexDirection: "column" }}>
-          <ExamTaker exam={takingExam} isAO={isAO} session={session} onClose={() => setTakingExam(null)} />
-        </main>
-      </div>
+      <AuthGuard>
+        <div className="app-container"><Sidebar />
+          <main className="main-content" style={{ display: "flex", flexDirection: "column" }}>
+            <ExamTaker exam={takingExam} isAO={isAO} session={session} onClose={() => setTakingExam(null)} />
+          </main>
+        </div>
+      </AuthGuard>
     );
   }
 
   if (takingAssignment) {
     const asgn = takingAssignment.assignment;
     return (
-      <div className="app-container"><Sidebar />
-        <main className="main-content" style={{ display: "flex", flexDirection: "column" }}>
-          <div style={{ marginBottom: "1rem" }}>
-            <span style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>
-              {typeLabel(asgn.assignment_type)} — {isAO ? "Xumura" : "Due"}: {new Date(asgn.due_date).toLocaleDateString()}
-            </span>
-            <h2 style={{ fontSize: "1.5rem", fontWeight: 700 }}>{asgn.title}</h2>
-          </div>
-          <ExamTaker exam={asgn.exams} isAO={isAO} session={session} onClose={() => setTakingAssignment(null)} assignmentId={asgn.id} />
-        </main>
-      </div>
+      <AuthGuard>
+        <div className="app-container"><Sidebar />
+          <main className="main-content" style={{ display: "flex", flexDirection: "column" }}>
+            <div style={{ marginBottom: "1rem" }}>
+              <span style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>
+                {typeLabel(asgn.assignment_type)} — {isAO ? "Xumura" : "Due"}: {new Date(asgn.due_date).toLocaleDateString()}
+              </span>
+              <h2 style={{ fontSize: "1.5rem", fontWeight: 700 }}>{asgn.title}</h2>
+            </div>
+            <ExamTaker exam={asgn.exams} isAO={isAO} session={session} onClose={() => setTakingAssignment(null)} assignmentId={asgn.id} />
+          </main>
+        </div>
+      </AuthGuard>
     );
   }
 
   // Full grading view
   if (gradingAssignment) {
     return (
-      <div className="app-container"><Sidebar />
-        <main className="main-content" style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+      <AuthGuard>
+        <div className="app-container"><Sidebar />
+          <main className="main-content" style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <div>
               <h1 style={{ fontSize: "1.75rem", fontWeight: 700 }}>{isAO ? "Deebii Barataa Madaali" : "Grade Submissions"}</h1>
@@ -524,11 +530,12 @@ export default function ExamsPage() {
   // ── Main tabbed layout ────────────────────────────────────────────────────
 
   return (
-    <div className="app-container">
-      <Sidebar />
-      <main className="main-content" style={{ display: "flex", flexDirection: "column" }}>
+    <AuthGuard>
+      <div className="app-container">
+        <Sidebar />
+        <main className="main-content" style={{ display: "flex", flexDirection: "column" }}>
 
-        {/* Print styles */}
+        {/* Print styles and mobile responsive utilities */}
         <style jsx global>{`
           @media print {
             body { background: white !important; color: black !important; }
@@ -536,6 +543,26 @@ export default function ExamsPage() {
             .main-content { padding: 0 !important; height: auto !important; overflow: visible !important; }
             .glass-panel { background: transparent !important; border: none !important; box-shadow: none !important; padding: 0 !important; }
             p, span, div, h1, h2, h3, h4, h5, h6 { color: black !important; }
+          }
+          
+          /* Mobile responsive utilities */
+          .hidden { display: none; }
+          
+          @media (min-width: 640px) {
+            .sm\\:inline { display: inline; }
+          }
+          
+          .grid { display: grid; }
+          .grid-cols-1 { grid-template-columns: repeat(1, minmax(0, 1fr)); }
+          .gap-8 { gap: 2rem; }
+          
+          @media (min-width: 1024px) {
+            .lg\\:grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+          }
+          
+          /* Hide scrollbar for tab navigation */
+          .no-print::-webkit-scrollbar {
+            display: none;
           }
         `}</style>
 
@@ -557,7 +584,14 @@ export default function ExamsPage() {
         </div>
 
         {/* Tab bar */}
-        <div className="no-print" style={{ display: "flex", gap: "0.35rem", marginBottom: "2rem", borderBottom: "1px solid var(--glass-border)", paddingBottom: "0" }}>
+        <div className="no-print" style={{ 
+          display: "flex", gap: "0.35rem", marginBottom: "2rem", 
+          borderBottom: "1px solid var(--glass-border)", paddingBottom: "0",
+          overflowX: "auto", // Enable horizontal scrolling on mobile
+          scrollbarWidth: "none", // Hide scrollbar
+          msOverflowStyle: "none", // Hide scrollbar for IE
+          WebkitOverflowScrolling: "touch" // Smooth scrolling on iOS
+        }}>
           {tabs.map((t) => (
             <button
               key={t.id}
@@ -569,9 +603,11 @@ export default function ExamsPage() {
                 color: tab === t.id ? "var(--primary)" : "var(--text-secondary)",
                 borderBottom: tab === t.id ? "2px solid var(--primary)" : "2px solid transparent",
                 marginBottom: "-1px", transition: "all 0.15s",
+                whiteSpace: "nowrap", // Prevent text wrapping
+                flexShrink: 0 // Prevent button shrinking
               }}
             >
-              {t.icon} {t.label}
+              {t.icon} <span className="hidden sm:inline">{t.label}</span>
             </button>
           ))}
         </div>
@@ -590,7 +626,7 @@ export default function ExamsPage() {
                 </button>
               </div>
             ) : (
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "1.25rem" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(280px, 100%), 1fr))", gap: "1.25rem" }}>
                 {savedExams.map((ex) => (
                   <div key={ex.id} className="glass-panel glass-panel-hover" style={{ padding: "1.25rem", display: "flex", flexDirection: "column", gap: "0.75rem" }}>
                     <div>
@@ -600,16 +636,16 @@ export default function ExamsPage() {
                     </div>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "auto", paddingTop: "0.5rem", borderTop: "1px solid var(--glass-border)" }}>
                       <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>{ex.question_count} {isAO ? "Gaaffilee" : "Questions"}</span>
-                      <div style={{ display: "flex", gap: "0.5rem" }}>
+                      <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
                         <button onClick={() => setTakingExam(ex as any)} className="btn btn-primary" style={{ padding: "0.35rem 0.75rem", fontSize: "0.8rem" }}>
-                          <Play size={12} /> {isAO ? "Fudhadhu" : "Take"}
+                          <Play size={12} /> <span className="hidden sm:inline">{isAO ? "Fudhadhu" : "Take"}</span>
                         </button>
                         {isTeacher && (
                           <button
                             onClick={() => { setPublishingFor({ exam_id: ex.id, subject: ex.subject, topic: ex.topic }); setPubTitle(`${ex.subject} — ${ex.topic}`); setPubGrade(activeGrade ?? "12"); setTab("my-assignments"); }}
                             className="btn btn-outline" style={{ padding: "0.35rem 0.75rem", fontSize: "0.8rem" }}
                           >
-                            <Send size={12} /> {isAO ? "Maxxansi" : "Publish"}
+                            <Send size={12} /> <span className="hidden sm:inline">{isAO ? "Maxxansi" : "Publish"}</span>
                           </button>
                         )}
                       </div>
@@ -623,79 +659,82 @@ export default function ExamsPage() {
 
         {/* ── TAB: AI GENERATOR ───────────────────────────────────────────── */}
         {tab === "generator" && !generatedExam && (
-          <div className="animate-fade-in" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "2rem" }}>
-            <div className="glass-panel" style={{ padding: "2rem" }}>
-              <h2 style={{ fontSize: "1.2rem", fontWeight: 700, marginBottom: "1.5rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                <Plus size={18} style={{ color: "var(--primary)" }} /> {isAO ? "Qormaata Haaraa Uumi" : "Generate New Practice Exam"}
-              </h2>
-              <form onSubmit={handleGenerate}>
-                <div className="form-group">
-                  <label className="form-label">{isAO ? "Gosa Barnootaa" : "Subject"}</label>
-                  <select className="form-select" value={subject} onChange={(e) => setSubject(e.target.value)} required>
-                    <option value="">-- {isAO ? "Filadhu" : "Choose"} --</option>
-                    {subjects.map((s) => <option key={s} value={s}>{s}</option>)}
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label className="form-label">{isAO ? "Mata-duree" : "Topic / Chapter"}</label>
-                  <input type="text" className="form-input" required value={topic} onChange={(e) => setTopic(e.target.value)} placeholder={isAO ? "fkn. Boqonnaa 2" : "e.g. Chapter 2, Cell Division"} />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">{isAO ? "Sadarkaa" : "Difficulty"}</label>
-                  <select className="form-select" value={difficulty} onChange={(e) => setDifficulty(e.target.value)}>
-                    <option value="easy">{isAO ? "Salphaa" : "Easy"}</option>
-                    <option value="medium">{isAO ? "Giddu-galeessa" : "Medium"}</option>
-                    <option value="hard">{isAO ? "Jabaa" : "Hard"}</option>
-                  </select>
-                </div>
-                <div className="form-group" style={{ marginBottom: "1.5rem" }}>
-                  <label className="form-label">{isAO ? "Gosa Gaaffilee" : "Question Types"}</label>
-                  <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", marginTop: "0.25rem" }}>
-                    {[["multiple_choice", isAO ? "Filannoo" : "Multiple Choice"], ["true_false", isAO ? "Dhugaa/Soba" : "True or False"], ["blank_space", isAO ? "Iddoo Duudaa" : "Fill in Blank"], ["definition", isAO ? "Hiika" : "Definition"]].map(([key, label]) => (
-                      <label key={key} style={{ display: "flex", alignItems: "center", gap: "0.6rem", cursor: "pointer", padding: "0.45rem 0.75rem", borderRadius: "6px", border: "1px solid", borderColor: examTypes.includes(key) ? "var(--primary)" : "transparent", background: examTypes.includes(key) ? "rgba(14,165,233,0.05)" : "transparent" }}>
-                        <input type="checkbox" checked={examTypes.includes(key)} onChange={() => toggleType(key)} style={{ width: "15px", height: "15px" }} />
-                        <span style={{ fontSize: "0.88rem" }}>{label}</span>
-                      </label>
-                    ))}
+          <div className="animate-fade-in" style={{ display: "grid", gridTemplateColumns: "1fr", gap: "2rem" }}>
+            {/* Mobile-first: Stack form and info vertically */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              <div className="glass-panel" style={{ padding: "2rem" }}>
+                <h2 style={{ fontSize: "1.2rem", fontWeight: 700, marginBottom: "1.5rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                  <Plus size={18} style={{ color: "var(--primary)" }} /> {isAO ? "Qormaata Haaraa Uumi" : "Generate New Practice Exam"}
+                </h2>
+                <form onSubmit={handleGenerate}>
+                  <div className="form-group">
+                    <label className="form-label">{isAO ? "Gosa Barnootaa" : "Subject"}</label>
+                    <select className="form-select" value={subject} onChange={(e) => setSubject(e.target.value)} required>
+                      <option value="">-- {isAO ? "Filadhu" : "Choose"} --</option>
+                      {subjects.map((s) => <option key={s} value={s}>{s}</option>)}
+                    </select>
                   </div>
-                </div>
-                <button type="submit" className="btn btn-primary" disabled={generating || !subject || !topic || examTypes.length === 0} style={{ width: "100%" }}>
-                  {generating ? (isAO ? "Uumamaa jira..." : "Generating...") : (isAO ? "Qormaata Uumi" : "Generate Exam")}
-                </button>
-                {generateError && (
-                  <div style={{ marginTop: "1rem", padding: "0.75rem 1rem", borderRadius: "var(--radius-sm)", background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", color: "var(--danger)", fontSize: "0.85rem" }}>
-                    {generateError}
+                  <div className="form-group">
+                    <label className="form-label">{isAO ? "Mata-duree" : "Topic / Chapter"}</label>
+                    <input type="text" className="form-input" required value={topic} onChange={(e) => setTopic(e.target.value)} placeholder={isAO ? "fkn. Boqonnaa 2" : "e.g. Chapter 2, Cell Division"} />
                   </div>
-                )}
-              </form>
-            </div>
-            <div className="glass-panel" style={{ padding: "2rem", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", color: "var(--text-secondary)", textAlign: "center" }}>
-              <Award size={48} style={{ color: "var(--text-muted)", marginBottom: "1rem" }} />
-              <h3 style={{ marginBottom: "0.5rem" }}>{isAO ? "Qormaata Barumsa Keetiif" : "AI-Powered Exam Generation"}</h3>
-              <p style={{ fontSize: "0.9rem", maxWidth: "320px" }}>{isAO ? "AI-n qormaata kuusaa barnoota irratti hundaa'e uuma." : "The AI generates questions grounded in your uploaded curriculum documents."}</p>
+                  <div className="form-group">
+                    <label className="form-label">{isAO ? "Sadarkaa" : "Difficulty"}</label>
+                    <select className="form-select" value={difficulty} onChange={(e) => setDifficulty(e.target.value)}>
+                      <option value="easy">{isAO ? "Salphaa" : "Easy"}</option>
+                      <option value="medium">{isAO ? "Giddu-galeessa" : "Medium"}</option>
+                      <option value="hard">{isAO ? "Jabaa" : "Hard"}</option>
+                    </select>
+                  </div>
+                  <div className="form-group" style={{ marginBottom: "1.5rem" }}>
+                    <label className="form-label">{isAO ? "Gosa Gaaffilee" : "Question Types"}</label>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "0.5rem", marginTop: "0.25rem" }}>
+                      {[["multiple_choice", isAO ? "Filannoo" : "Multiple Choice"], ["true_false", isAO ? "Dhugaa/Soba" : "True or False"], ["blank_space", isAO ? "Iddoo Duudaa" : "Fill in Blank"], ["definition", isAO ? "Hiika" : "Definition"]].map(([key, label]) => (
+                        <label key={key} style={{ display: "flex", alignItems: "center", gap: "0.6rem", cursor: "pointer", padding: "0.45rem 0.75rem", borderRadius: "6px", border: "1px solid", borderColor: examTypes.includes(key) ? "var(--primary)" : "transparent", background: examTypes.includes(key) ? "rgba(14,165,233,0.05)" : "transparent" }}>
+                          <input type="checkbox" checked={examTypes.includes(key)} onChange={() => toggleType(key)} style={{ width: "15px", height: "15px" }} />
+                          <span style={{ fontSize: "0.88rem" }}>{label}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                  <button type="submit" className="btn btn-primary" disabled={generating || !subject || !topic || examTypes.length === 0} style={{ width: "100%" }}>
+                    {generating ? (isAO ? "Uumamaa jira..." : "Generating...") : (isAO ? "Qormaata Uumi" : "Generate Exam")}
+                  </button>
+                  {generateError && (
+                    <div style={{ marginTop: "1rem", padding: "0.75rem 1rem", borderRadius: "var(--radius-sm)", background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", color: "var(--danger)", fontSize: "0.85rem" }}>
+                      {generateError}
+                    </div>
+                  )}
+                </form>
+              </div>
+              <div className="glass-panel" style={{ padding: "2rem", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", color: "var(--text-secondary)", textAlign: "center" }}>
+                <Award size={48} style={{ color: "var(--text-muted)", marginBottom: "1rem" }} />
+                <h3 style={{ marginBottom: "0.5rem" }}>{isAO ? "Qormaata Barumsa Keetiif" : "AI-Powered Exam Generation"}</h3>
+                <p style={{ fontSize: "0.9rem", maxWidth: "320px" }}>{isAO ? "AI-n qormaata kuusaa barnoota irratti hundaa'e uuma." : "The AI generates questions grounded in your uploaded curriculum documents."}</p>
+              </div>
             </div>
           </div>
         )}
 
         {tab === "generator" && generatedExam && (
           <div className="animate-fade-in">
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "1rem", marginBottom: "1.5rem" }}>
               <div>
                 <span style={{ color: "var(--success)", fontSize: "0.85rem", fontWeight: 600 }}>✓ {isAO ? "Qormaanni uumame!" : "Exam generated!"}</span>
                 <h2 style={{ fontSize: "1.3rem", fontWeight: 700 }}>{generatedExam.subject} — {generatedExam.topic}</h2>
               </div>
-              <div style={{ display: "flex", gap: "0.75rem" }}>
+              <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
                 {isTeacher && (
                   <button onClick={() => { setPublishingFor({ exam_id: generatedExam.id, subject: generatedExam.subject, topic: generatedExam.topic }); setPubTitle(`${generatedExam.subject} — ${generatedExam.topic}`); setPubGrade(activeGrade ?? "12"); setTab("my-assignments"); setGeneratedExam(null); }} className="btn btn-primary">
-                    <Send size={14} /> {isAO ? "Barattoota Ramaddi" : "Assign to Students"}
+                    <Send size={14} /> <span className="hidden sm:inline">{isAO ? "Barattoota Ramaddi" : "Assign to Students"}</span>
                   </button>
                 )}
                 {/* Print exam without taking it — teacher can print a physical copy */}
                 <button onClick={() => window.print()} className="btn btn-outline">
-                  <Download size={14} /> {isAO ? "Maxxansi" : "Print"}
+                  <Download size={14} /> <span className="hidden sm:inline">{isAO ? "Maxxansi" : "Print"}</span>
                 </button>
                 <button onClick={() => { setTakingExam(generatedExam); setGeneratedExam(null); }} className="btn btn-outline">
-                  <Play size={14} /> {isAO ? "Amma Fudhadhu" : "Take Now"}
+                  <Play size={14} /> <span className="hidden sm:inline">{isAO ? "Amma Fudhadhu" : "Take Now"}</span>
                 </button>
                 <button onClick={() => setGeneratedExam(null)} className="btn btn-outline">{isAO ? "Haaraa Uumi" : "Generate Another"}</button>
               </div>
@@ -732,8 +771,8 @@ export default function ExamsPage() {
 
                   return (
                     <div key={a.id} className="glass-panel" style={{ padding: "1.25rem 1.5rem", opacity: past && !submitted ? 0.65 : 1 }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                        <div style={{ flex: 1 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "1rem", flexWrap: "wrap" }}>
+                        <div style={{ flex: 1, minWidth: "200px" }}>
                           <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.35rem", flexWrap: "wrap" }}>
                             <span style={{ fontSize: "0.72rem", fontWeight: 700, background: `rgba(${typeColor(a.assignment_type) === "var(--primary)" ? "14,165,233" : typeColor(a.assignment_type) === "var(--secondary)" ? "20,184,166" : "99,102,241"},0.12)`, color: typeColor(a.assignment_type), padding: "0.15rem 0.5rem", borderRadius: "8px", textTransform: "capitalize" }}>
                               {typeLabel(a.assignment_type)}
@@ -750,7 +789,7 @@ export default function ExamsPage() {
                         </div>
 
                         {/* Right side: score badge OR action button */}
-                        <div style={{ marginLeft: "1rem", flexShrink: 0, textAlign: "right" }}>
+                        <div style={{ flexShrink: 0, textAlign: "right" }}>
                           {submitted && displayScore !== null ? (
                             <div style={{ padding: "0.35rem 0.85rem", borderRadius: "8px", background: displayScore >= 80 ? "rgba(34,197,94,0.1)" : displayScore >= 50 ? "rgba(245,158,11,0.1)" : "rgba(239,68,68,0.1)", color: displayScore >= 80 ? "var(--success)" : displayScore >= 50 ? "var(--warning)" : "var(--danger)", fontWeight: 800, fontSize: "1.1rem" }}>
                               {Math.round(displayScore)}%
@@ -766,7 +805,7 @@ export default function ExamsPage() {
                               disabled={past}
                               style={{ minWidth: "100px" }}
                             >
-                              {past ? (isAO ? "Darbeera" : "Closed") : <><Play size={14} /> {isAO ? "Eegali" : "Start"}</>}
+                              {past ? (isAO ? "Darbeera" : "Closed") : <><Play size={14} /> <span className="hidden sm:inline">{isAO ? "Eegali" : "Start"}</span></>}
                             </button>
                           )}
                         </div>
@@ -799,7 +838,7 @@ export default function ExamsPage() {
                 <h2 style={{ fontSize: "1.15rem", fontWeight: 700, marginBottom: "1.25rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
                   <Send size={17} style={{ color: "var(--accent)" }} /> {isAO ? "Hojii Ramaddi" : "Publish Assignment"} — {publishingFor.subject} / {publishingFor.topic}
                 </h2>
-                <form onSubmit={handlePublish} style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+                <form onSubmit={handlePublish} style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: "1rem" }}>
                   <div className="form-group" style={{ margin: 0 }}>
                     <label className="form-label">{isAO ? "Mata-duree Ramaddii" : "Assignment Title"}</label>
                     <input type="text" className="form-input" required value={pubTitle} onChange={(e) => setPubTitle(e.target.value)} placeholder={isAO ? "fkn. Hojii Mana 3" : "e.g. Week 3 Homework"} />
@@ -827,10 +866,10 @@ export default function ExamsPage() {
                       <input type="time" className="form-input" required value={pubDueTime} onChange={(e) => setPubDueTime(e.target.value)} style={{ width: "110px" }} />
                     </div>
                   </div>
-                  <div style={{ gridColumn: "1 / -1", display: "flex", gap: "0.75rem", justifyContent: "flex-end" }}>
+                  <div style={{ gridColumn: "1 / -1", display: "flex", gap: "0.75rem", justifyContent: "flex-end", flexWrap: "wrap" }}>
                     <button type="button" onClick={() => setPublishingFor(null)} className="btn btn-outline">{isAO ? "Haqi" : "Cancel"}</button>
                     <button type="submit" className="btn btn-primary" disabled={publishing}>
-                      {publishing ? "..." : <><Send size={14} /> {isAO ? "Maxxansi" : "Publish to Students"}</>}
+                      {publishing ? "..." : <><Send size={14} /> <span className="hidden sm:inline">{isAO ? "Maxxansi" : "Publish to Students"}</span></>}
                     </button>
                   </div>
                 </form>
@@ -857,9 +896,9 @@ export default function ExamsPage() {
                   {teacherAssignments.map((a) => {
                     const past = isPastDue(a.due_date);
                     return (
-                      <div key={a.id} className="glass-panel" style={{ padding: "1.25rem 1.5rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                        <div>
-                          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.35rem" }}>
+                      <div key={a.id} className="glass-panel" style={{ padding: "1.25rem 1.5rem", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "1rem" }}>
+                        <div style={{ flex: 1, minWidth: "200px" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.35rem", flexWrap: "wrap" }}>
                             <span style={{ fontSize: "0.72rem", fontWeight: 700, color: typeColor(a.assignment_type), textTransform: "capitalize" }}>● {typeLabel(a.assignment_type)}</span>
                             <span style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>Grade {a.target_grade}</span>
                             <span style={{ fontSize: "0.72rem", color: past ? "var(--danger)" : "var(--success)" }}>
@@ -870,7 +909,7 @@ export default function ExamsPage() {
                           <span style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>{a.exams?.subject} — {a.exams?.topic}</span>
                         </div>
                         <button onClick={() => fetchSubmissions(a)} className="btn btn-outline" style={{ fontSize: "0.82rem" }}>
-                          <Users size={13} /> {isAO ? "Deebii Ilaali" : "View Submissions"}
+                          <Users size={13} /> <span className="hidden sm:inline">{isAO ? "Deebii Ilaali" : "View Submissions"}</span>
                         </button>
                       </div>
                     );
@@ -883,5 +922,6 @@ export default function ExamsPage() {
 
       </main>
     </div>
+    </AuthGuard>
   );
 }

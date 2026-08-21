@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/context/AuthContext";
 import Sidebar from "@/components/Sidebar";
+import AuthGuard from "@/components/AuthGuard";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import TutorResponse from "@/components/TutorResponse";
@@ -258,45 +259,31 @@ export default function TutorPage() {
   };
 
   return (
-    <div className="app-container">
-      <Sidebar />
+    <AuthGuard>
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex">
+        <Sidebar />
       
-      <main className="main-content" style={{ padding: 0, flexDirection: "row" }}>
+      <main className="flex-1 flex flex-col md:flex-row">
         
-        {/* Chat History Panel (Sidebar within Tutor page) */}
-        <div style={{
-          width: "260px",
-          borderRight: "1px solid var(--glass-border)",
-          background: "rgba(0, 0, 0, 0.15)",
-          display: "flex",
-          flexDirection: "column",
-          height: "100vh"
-        }}>
-          <div style={{ padding: "1.5rem", borderBottom: "1px solid var(--glass-border)" }}>
-            <h3 style={{ fontSize: "1rem", fontWeight: 600, display: "flex", alignItems: "center", gap: "0.5rem" }}>
+        {/* Chat History Panel (Mobile: Hidden by default, Desktop: Always visible) */}
+        <div className="hidden md:flex w-64 border-r border-white/20 bg-black/15 flex-col h-screen">
+          <div className="p-4 md:p-6 border-b border-white/20">
+            <h3 className="text-sm md:text-base font-semibold flex items-center gap-2">
               <History size={16} /> {t.activeSessions}
             </h3>
           </div>
           
           {/* New Session Options */}
-          <div style={{ padding: "1rem", borderBottom: "1px solid var(--glass-border)" }}>
-            <span style={{ fontSize: "0.75rem", color: "var(--text-secondary)", textTransform: "uppercase", display: "block", marginBottom: "0.5rem" }}>
+          <div className="p-3 md:p-4 border-b border-white/20">
+            <span className="text-xs text-gray-400 uppercase block mb-2">
               {t.newChat}
             </span>
-            <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
+            <div className="space-y-2">
               {subjects.map((sub) => (
                 <button
                   key={sub}
                   onClick={() => startNewSession(sub)}
-                  className="btn btn-outline"
-                  style={{
-                    padding: "0.4rem 0.75rem",
-                    fontSize: "0.8rem",
-                    justifyContent: "flex-start",
-                    textAlign: "left",
-                    width: "100%",
-                    borderRadius: "6px"
-                  }}
+                  className="w-full text-left px-3 py-2 text-xs md:text-sm bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 rounded-lg flex items-center gap-2 transition-colors"
                 >
                   <PlusCircle size={12} /> {sub}
                 </button>
@@ -305,46 +292,34 @@ export default function TutorPage() {
           </div>
 
           {/* Session List */}
-          <div style={{ flex: 1, overflowY: "auto", padding: "0.75rem" }}>
+          <div className="flex-1 overflow-y-auto p-3">
             {fetchingSessions ? (
-              <p style={{ textAlign: "center", fontSize: "0.8rem", color: "var(--text-muted)", marginTop: "1rem" }}>{t.loading}</p>
+              <p className="text-center text-xs text-gray-500 mt-4">{t.loading}</p>
             ) : sessions.length === 0 ? (
-              <p style={{ textAlign: "center", fontSize: "0.8rem", color: "var(--text-muted)", marginTop: "1rem" }}>{t.noActiveSessions}</p>
+              <p className="text-center text-xs text-gray-500 mt-4">{t.noActiveSessions}</p>
             ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
+              <div className="space-y-2">
                 {sessions.map((s) => (
                   <button
                     key={s.id}
                     onClick={() => loadSession(s.id)}
-                    style={{
-                      width: "100%",
-                      padding: "0.75rem",
-                      borderRadius: "8px",
-                      background: activeSessionId === s.id ? "var(--glass-active)" : "transparent",
-                      border: "1px solid",
-                      borderColor: activeSessionId === s.id ? "rgba(14, 165, 233, 0.3)" : "transparent",
-                      textAlign: "left",
-                      cursor: "pointer",
-                      transition: "all var(--transition-fast)"
-                    }}
-                    className={activeSessionId !== s.id ? "glass-panel-hover" : ""}
+                    className={`w-full p-3 rounded-lg text-left transition-colors ${
+                      activeSessionId === s.id
+                        ? 'bg-blue-600/20 border border-blue-500/30'
+                        : 'bg-transparent hover:bg-white/5 border border-transparent'
+                    }`}
                   >
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.25rem" }}>
-                      <span style={{ fontSize: "0.85rem", fontWeight: 600, color: activeSessionId === s.id ? "var(--primary)" : "#fff" }}>
+                    <div className="flex justify-between items-center mb-1">
+                      <span className={`text-sm font-medium ${
+                        activeSessionId === s.id ? 'text-blue-400' : 'text-white'
+                      }`}>
                         {s.subject}
                       </span>
-                      <span style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>
+                      <span className="text-xs text-gray-500">
                         {new Date(s.started_at).toLocaleDateString()}
                       </span>
                     </div>
-                    <p style={{
-                      fontSize: "0.75rem",
-                      color: "var(--text-secondary)",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      whiteSpace: "nowrap",
-                      margin: 0
-                    }}>
+                    <p className="text-xs text-gray-400 truncate">
                       {s.last_message}
                     </p>
                   </button>
@@ -355,97 +330,58 @@ export default function TutorPage() {
         </div>
 
         {/* Chat Interface Panel */}
-        <div style={{ flex: 1, display: "flex", flexDirection: "column", height: "100vh", background: "rgba(0, 0, 0, 0.05)" }}>
+        <div className="flex-1 flex flex-col h-screen">
           {/* Top Navbar */}
-          <div style={{
-            height: "72px",
-            borderBottom: "1px solid var(--glass-border)",
-            padding: "0 2rem",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            background: "rgba(10, 20, 44, 0.3)"
-          }}>
-            <div>
+          <div className="h-16 md:h-18 border-b border-white/20 px-4 md:px-8 flex items-center justify-between bg-black/20">
+            <div className="flex items-center gap-2 min-w-0">
               {selectedSubject ? (
-                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                  <MessageSquare size={20} style={{ color: "var(--primary)" }} />
-                  <h1 style={{ fontSize: "1.2rem", fontWeight: 700 }}>
+                <>
+                  <MessageSquare size={18} className="text-blue-400 flex-shrink-0" />
+                  <h1 className="text-sm md:text-lg font-bold truncate">
                     {selectedSubject} {t.tutorTitleSuffix} {user.grade})
                   </h1>
-                </div>
+                </>
               ) : (
-                <span style={{ color: "var(--text-secondary)", fontSize: "0.95rem" }}>{t.selectSession}</span>
+                <span className="text-gray-400 text-sm">{t.selectSession}</span>
               )}
             </div>
 
-            <div style={{
-              fontSize: "0.8rem",
-              background: "rgba(20, 184, 166, 0.1)",
-              color: "var(--secondary)",
-              padding: "0.35rem 0.75rem",
-              borderRadius: "20px",
-              fontWeight: 600,
-              border: "1px solid rgba(20, 184, 166, 0.2)"
-            }}>
+            <div className="hidden sm:flex text-xs bg-teal-500/10 text-teal-400 px-3 py-1.5 rounded-full font-medium border border-teal-500/20">
               {t.curriculumBanner}
             </div>
           </div>
 
           {/* Messages Area */}
-          <div style={{
-            flex: 1,
-            overflowY: "auto",
-            padding: "2rem",
-            display: "flex",
-            flexDirection: "column",
-            gap: "1.5rem"
-          }}>
+          <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-4 md:space-y-6">
             {!activeSessionId ? (
-              <div style={{
-                height: "100%",
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "var(--text-secondary)",
-                textAlign: "center",
-                maxWidth: "400px",
-                margin: "0 auto"
-              }}>
-                <Bot size={48} style={{ color: "var(--text-muted)", marginBottom: "1rem" }} />
-                <h3 style={{ marginBottom: "0.5rem" }}>{t.noActiveSessionHeader}</h3>
-                <p style={{ fontSize: "0.9rem" }}>{t.noActiveSessionDesc}</p>
+              <div className="h-full flex flex-col items-center justify-center text-center px-4">
+                <Bot size={32} className="md:w-12 md:h-12 text-gray-500 mb-4" />
+                <h3 className="text-lg md:text-xl font-semibold mb-2">{t.noActiveSessionHeader}</h3>
+                <p className="text-sm md:text-base text-gray-400 max-w-md">{t.noActiveSessionDesc}</p>
+                
+                {/* Mobile: Show subject selection */}
+                <div className="md:hidden mt-6 w-full max-w-sm space-y-2">
+                  <p className="text-xs text-gray-500 uppercase mb-3">{t.newChat}</p>
+                  {subjects.map((sub) => (
+                    <button
+                      key={sub}
+                      onClick={() => startNewSession(sub)}
+                      className="w-full text-left px-4 py-3 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 rounded-lg flex items-center gap-2 transition-colors"
+                    >
+                      <PlusCircle size={16} /> {sub}
+                    </button>
+                  ))}
+                </div>
               </div>
             ) : messages.length === 0 && !fetchingMessages ? (
-              <div style={{
-                height: "100%",
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "var(--text-secondary)",
-                textAlign: "center",
-                maxWidth: "400px",
-                margin: "0 auto"
-              }}>
-                <MessageSquare size={32} style={{ color: "var(--primary)", marginBottom: "1rem" }} />
-                <h3 style={{ marginBottom: "0.5rem" }}>{t.newChatHeader}</h3>
-                <p style={{ fontSize: "0.9rem" }}>{t.newChatDesc}</p>
+              <div className="h-full flex flex-col items-center justify-center text-center px-4">
+                <MessageSquare size={24} className="md:w-8 md:h-8 text-blue-400 mb-4" />
+                <h3 className="text-lg md:text-xl font-semibold mb-2">{t.newChatHeader}</h3>
+                <p className="text-sm md:text-base text-gray-400 max-w-md">{t.newChatDesc}</p>
               </div>
             ) : fetchingMessages ? (
-              <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <div style={{
-                  width: "30px",
-                  height: "30px",
-                  border: "2px solid var(--glass-border)",
-                  borderTopColor: "var(--primary)",
-                  borderRadius: "50%",
-                  animation: "spin 1s linear infinite"
-                }}></div>
-                <style jsx>{`
-                  @keyframes spin { to { transform: rotate(360deg); } }
-                `}</style>
+              <div className="h-full flex items-center justify-center">
+                <div className="w-6 h-6 md:w-8 md:h-8 border-2 border-gray-600 border-t-blue-500 rounded-full animate-spin"></div>
               </div>
             ) : (
               <>
@@ -454,72 +390,45 @@ export default function TutorPage() {
                   return (
                     <div 
                       key={index} 
-                      style={{
-                        display: "flex",
-                        flexDirection: "column",
-                        alignSelf: isStudent ? "flex-end" : "flex-start",
-                        maxWidth: "70%",
-                        gap: "0.25rem"
-                      }}
+                      className={`flex flex-col max-w-[85%] md:max-w-[70%] ${
+                        isStudent ? 'self-end' : 'self-start'
+                      }`}
                     >
                       <div 
-                        style={{
-                          background: isStudent ? "var(--glass-active)" : "rgba(255, 255, 255, 0.03)",
-                          border: isStudent ? "1px solid rgba(14, 165, 233, 0.3)" : "1px solid var(--glass-border)",
-                          padding: "1rem 1.25rem",
-                          borderRadius: isStudent ? "18px 18px 0px 18px" : "18px 18px 18px 0px",
-                          position: "relative"
-                        }}
+                        className={`p-3 md:p-4 rounded-2xl ${
+                          isStudent 
+                            ? 'bg-blue-600/20 border border-blue-500/30 rounded-br-sm' 
+                            : 'bg-white/5 border border-white/10 rounded-bl-sm'
+                        }`}
                       >
                         {/* Out of Scope Banner */}
                         {msg.out_of_scope && (
-                          <div style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "0.5rem",
-                            background: "rgba(245, 158, 11, 0.1)",
-                            border: "1px solid rgba(245, 158, 11, 0.2)",
-                            padding: "0.5rem 0.75rem",
-                            borderRadius: "6px",
-                            color: "var(--warning)",
-                            fontSize: "0.85rem",
-                            marginBottom: "0.75rem"
-                          }}>
-                            <AlertTriangle size={16} />
+                          <div className="flex items-center gap-2 bg-yellow-500/10 border border-yellow-500/20 p-2 md:p-3 rounded-lg text-yellow-400 text-xs md:text-sm mb-3">
+                            <AlertTriangle size={14} className="flex-shrink-0" />
                             <span>{t.outOfScope}</span>
                           </div>
                         )}
                         
-                        {/* Render tutor messages with rich formatting, student messages as plain text */}
+                        {/* Message content */}
                         {msg.sender === "tutor" ? (
                           <TutorResponse content={msg.content} />
                         ) : (
-                          <p style={{ fontSize: "0.95rem", lineHeight: 1.6, color: "#fff", margin: 0 }}>
+                          <p className="text-sm md:text-base text-white leading-relaxed">
                             {msg.content}
                           </p>
                         )}
                       </div>
 
-                      {/* Source Citations — chapter + page number from structured pipeline */}
+                      {/* Source Citations */}
                       {!isStudent && msg.sources && msg.sources.length > 0 && (
-                        <div style={{
-                          display: "flex",
-                          flexWrap: "wrap",
-                          gap: "0.35rem",
-                          marginTop: "0.4rem"
-                        }}>
+                        <div className="flex flex-wrap gap-1 md:gap-2 mt-2">
                           {msg.sources.map((src, sIdx) => {
-                            // Build a rich citation label using new structured fields
                             const chapterLabel = src.chapter
-                              ? src.chapter.slice(0, 50) + (src.chapter.length > 50 ? "..." : "")
-                              : src.source?.replace(/\.[^.]+$/, ""); // fallback to filename without ext
+                              ? src.chapter.slice(0, 40) + (src.chapter.length > 40 ? "..." : "")
+                              : src.source?.replace(/\.[^.]+$/, "");
 
                             const pageLabel = src.page_number && src.page_number > 0
                               ? (isAO ? `Fuula ${src.page_number}` : `p.${src.page_number}`)
-                              : null;
-
-                            const typeLabel = src.chunk_type && src.chunk_type !== "text"
-                              ? src.chunk_type
                               : null;
 
                             const similarityPct = src.similarity > 0
@@ -529,42 +438,14 @@ export default function TutorPage() {
                             return (
                               <div
                                 key={sIdx}
+                                className="flex items-center gap-1 text-xs bg-teal-500/10 border border-teal-500/20 px-2 py-1 rounded text-teal-400 max-w-full"
                                 title={`${src.source}${src.chapter ? ` — ${src.chunk_type}` : ""}`}
-                                style={{
-                                  display: "flex",
-                                  alignItems: "center",
-                                  gap: "0.3rem",
-                                  fontSize: "0.7rem",
-                                  color: "var(--secondary)",
-                                  background: "rgba(20, 184, 166, 0.08)",
-                                  border: "1px solid rgba(20, 184, 166, 0.15)",
-                                  padding: "0.2rem 0.5rem",
-                                  borderRadius: "4px",
-                                  maxWidth: "280px",
-                                }}
                               >
-                                <BookOpen size={10} style={{ flexShrink: 0 }} />
-                                <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                <BookOpen size={8} className="flex-shrink-0" />
+                                <span className="truncate">
                                   {chapterLabel}
-                                  {pageLabel && <span style={{ color: "var(--text-muted)", marginLeft: "0.25rem" }}>· {pageLabel}</span>}
-                                  {typeLabel && (
-                                    <span style={{
-                                      marginLeft: "0.3rem",
-                                      background: "rgba(99,102,241,0.15)",
-                                      color: "var(--accent)",
-                                      padding: "0 0.3rem",
-                                      borderRadius: "3px",
-                                      fontSize: "0.65rem",
-                                      textTransform: "capitalize",
-                                    }}>
-                                      {typeLabel}
-                                    </span>
-                                  )}
-                                  {similarityPct && (
-                                    <span style={{ color: "var(--text-muted)", marginLeft: "0.25rem" }}>
-                                      · {similarityPct}
-                                    </span>
-                                  )}
+                                  {pageLabel && <span className="text-gray-500"> · {pageLabel}</span>}
+                                  {similarityPct && <span className="text-gray-500"> · {similarityPct}</span>}
                                 </span>
                               </div>
                             );
@@ -574,20 +455,19 @@ export default function TutorPage() {
                     </div>
                   );
                 })}
+                
                 {sending && (
-                  <div style={{ display: "flex", alignSelf: "flex-start", gap: "0.5rem", alignItems: "center" }}>
-                    <Bot size={16} style={{ color: "var(--primary)" }} />
-                    <div style={{ display: "flex", gap: "4px" }}>
-                      <span className="dot" style={{ width: "6px", height: "6px", background: "var(--text-secondary)", borderRadius: "50%", animation: "bounce 1.4s infinite ease-in-out both" }}></span>
-                      <span className="dot" style={{ width: "6px", height: "6px", background: "var(--text-secondary)", borderRadius: "50%", animation: "bounce 1.4s infinite ease-in-out both 0.2s" }}></span>
-                      <span className="dot" style={{ width: "6px", height: "6px", background: "var(--text-secondary)", borderRadius: "50%", animation: "bounce 1.4s infinite ease-in-out both 0.4s" }}></span>
+                  <div className="flex items-center gap-2 self-start">
+                    <Bot size={16} className="text-blue-400" />
+                    <div className="flex gap-1">
+                      {[0, 0.2, 0.4].map((delay, i) => (
+                        <span 
+                          key={i}
+                          className="w-1.5 h-1.5 bg-gray-500 rounded-full animate-bounce"
+                          style={{ animationDelay: `${delay}s`, animationDuration: '1.4s' }}
+                        />
+                      ))}
                     </div>
-                    <style jsx>{`
-                      @keyframes bounce {
-                        0%, 80%, 100% { transform: scale(0); }
-                        40% { transform: scale(1.0); }
-                      }
-                    `}</style>
                   </div>
                 )}
               </>
@@ -597,43 +477,30 @@ export default function TutorPage() {
 
           {/* Input Form Box */}
           {activeSessionId && (
-            <div style={{
-              padding: "1.5rem 2rem",
-              borderTop: "1px solid var(--glass-border)",
-              background: "rgba(10, 20, 44, 0.2)"
-            }}>
-              <form onSubmit={handleSendMessage} style={{ display: "flex", gap: "1rem" }}>
+            <div className="p-4 md:p-6 border-t border-white/20 bg-black/10">
+              <form onSubmit={handleSendMessage} className="flex gap-3">
                 <input
                   type="text"
-                  className="form-input"
                   placeholder={t.placeholderInput}
                   required
                   value={inputText}
                   onChange={(e) => setInputText(e.target.value)}
                   disabled={sending}
-                  style={{ flex: 1, borderRadius: "24px", padding: "0.75rem 1.5rem" }}
+                  className="flex-1 px-4 py-3 bg-white/5 border border-white/20 rounded-2xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm md:text-base"
                 />
                 <button
                   type="submit"
-                  className="btn btn-primary"
                   disabled={sending || !inputText.trim()}
-                  style={{
-                    borderRadius: "50%",
-                    width: "46px",
-                    height: "46px",
-                    padding: 0,
-                    minWidth: "46px"
-                  }}
+                  className="w-11 h-11 md:w-12 md:h-12 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed rounded-full flex items-center justify-center transition-colors"
                 >
-                  <Send size={18} />
+                  <Send size={16} className="md:w-[18px] md:h-[18px]" />
                 </button>
               </form>
             </div>
           )}
-
         </div>
-
       </main>
     </div>
+    </AuthGuard>
   );
 }

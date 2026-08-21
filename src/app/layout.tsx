@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
 import CookieNotice from "@/components/CookieNotice";
+import AIPerformanceMonitor from "@/components/AIPerformanceMonitor";
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -24,6 +25,7 @@ export default function RootLayout({
         <AuthProvider>
           {children}
           <CookieNotice />
+          <AIPerformanceMonitor />
         </AuthProvider>
       </body>
     </html>

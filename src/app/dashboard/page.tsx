@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import Sidebar from "@/components/Sidebar";
+import AuthGuard from "@/components/AuthGuard";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
@@ -38,7 +39,7 @@ interface Stats {
 }
 
 export default function DashboardPage() {
-  const { user, loading } = useAuth();
+  const { user, loading, isEmailVerified, isAccountActive } = useAuth();
   const router = useRouter();
 
   const [pending, setPending] = useState<PendingAssignment[]>([]);
@@ -47,8 +48,13 @@ export default function DashboardPage() {
   const [fetching, setFetching] = useState(true);
 
   useEffect(() => {
-    if (!loading && !user) router.push("/");
-  }, [user, loading, router]);
+    if (!loading && !user) {
+      router.push("/");
+    } else if (user && (!isEmailVerified || !isAccountActive)) {
+      // AuthGuard will handle these states, but we should not navigate away
+      return;
+    }
+  }, [user, loading, isEmailVerified, isAccountActive, router]);
 
   useEffect(() => {
     if (user) loadDashboard();
@@ -176,27 +182,34 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="app-container">
-      <Sidebar />
+    <AuthGuard>
+      <div className="app-container">
+        <Sidebar />
 
-      <main className="main-content" style={{ gap: "2rem" }}>
+        <main className="main-content" style={{ gap: "2rem" }}>
 
         {/* ── Welcome Header ── */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-          <div>
+        <div style={{ 
+          display: "flex", 
+          justifyContent: "space-between", 
+          alignItems: "flex-start",
+          gap: "1rem",
+          flexWrap: "wrap" 
+        }}>
+          <div style={{ minWidth: "0", flex: 1 }}>
             <p style={{ color: "var(--text-secondary)", fontSize: "0.9rem", marginBottom: "0.25rem" }}>{greeting},</p>
-            <h1 style={{ fontSize: "2rem", fontWeight: 800 }}>{user.name} 👋</h1>
+            <h1 style={{ fontSize: "clamp(1.5rem, 4vw, 2rem)", fontWeight: 800, wordBreak: "break-word" }}>{user.name} 👋</h1>
             <p style={{ color: "var(--text-secondary)", fontSize: "0.9rem", marginTop: "0.35rem" }}>
               {isAO
                 ? `Kutaa ${activeGrade} · ${user.language}`
                 : `Grade ${activeGrade} · ${user.language}${isTeacher ? " · " + (isAO ? "Barsiisaa" : "Teacher") : ""}`}
             </p>
           </div>
-          <img src="/logo.png" alt="I-Pass-A" style={{ width: "52px", height: "52px", borderRadius: "10px", objectFit: "cover" }} />
+          <img src="/logo.png" alt="I-Pass-A" style={{ width: "52px", height: "52px", borderRadius: "10px", objectFit: "cover", flexShrink: 0 }} />
         </div>
 
         {/* ── Stats Row ── */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "1rem" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "1rem" }}>
           {[
             {
               icon: <MessageSquare size={20} style={{ color: "var(--primary)" }} />,
@@ -223,11 +236,11 @@ export default function DashboardPage() {
               color: "var(--warning)",
             },
           ].map((s, i) => (
-            <div key={i} className="glass-panel" style={{ padding: "1.25rem 1.5rem", display: "flex", alignItems: "center", gap: "1rem" }}>
+            <div key={i} className="glass-panel" style={{ padding: "1.25rem 1.5rem", display: "flex", alignItems: "center", gap: "1rem", minWidth: "0" }}>
               <div style={{ width: "42px", height: "42px", borderRadius: "10px", background: `${s.color}18`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                 {s.icon}
               </div>
-              <div>
+              <div style={{ minWidth: "0" }}>
                 <div style={{ fontSize: "1.5rem", fontWeight: 700, lineHeight: 1.1 }}>{s.value}</div>
                 <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginTop: "0.2rem" }}>{s.label}</div>
               </div>
@@ -236,7 +249,12 @@ export default function DashboardPage() {
         </div>
 
         {/* ── Main Grid ── */}
-        <div style={{ display: "grid", gridTemplateColumns: "1.3fr 1fr", gap: "1.75rem", flex: 1 }}>
+        <div style={{ 
+          display: "grid", 
+          gridTemplateColumns: "1fr",
+          gap: "1.75rem", 
+          flex: 1 
+        }} className="lg:grid-cols-[1.3fr_1fr]">
 
           {/* Left column */}
           <div style={{ display: "flex", flexDirection: "column", gap: "1.75rem" }}>
@@ -265,17 +283,17 @@ export default function DashboardPage() {
                   <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
                     {pending.map((a) => (
                       <Link key={a.id} href="/exams" style={{ textDecoration: "none" }}>
-                        <div className="glass-panel glass-panel-hover" style={{ padding: "0.9rem 1rem", display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer" }}>
-                          <div>
-                            <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", marginBottom: "0.25rem" }}>
+                        <div className="glass-panel glass-panel-hover" style={{ padding: "0.9rem 1rem", display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer", gap: "0.5rem", minWidth: "0" }}>
+                          <div style={{ minWidth: "0", flex: 1 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", marginBottom: "0.25rem", flexWrap: "wrap" }}>
                               <span style={{ fontSize: "0.68rem", fontWeight: 700, color: typeColor(a.assignment_type), background: `${typeColor(a.assignment_type)}15`, padding: "0.1rem 0.4rem", borderRadius: "4px", textTransform: "capitalize" }}>
                                 {typeLabel(a.assignment_type)}
                               </span>
                               <span style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>{a.subject}</span>
                             </div>
-                            <p style={{ fontSize: "0.9rem", fontWeight: 600, color: "var(--text-primary)" }}>{a.title}</p>
+                            <p style={{ fontSize: "0.9rem", fontWeight: 600, color: "var(--text-primary)", wordBreak: "break-word" }}>{a.title}</p>
                           </div>
-                          <div style={{ textAlign: "right", flexShrink: 0, marginLeft: "0.75rem" }}>
+                          <div style={{ textAlign: "right", flexShrink: 0 }}>
                             <div style={{ display: "flex", alignItems: "center", gap: "0.3rem", fontSize: "0.75rem", color: "var(--warning)" }}>
                               <Clock size={11} /> {daysUntil(a.due_date)}
                             </div>
@@ -343,13 +361,13 @@ export default function DashboardPage() {
               ) : (
                 <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem" }}>
                   {recent.map((a) => (
-                    <div key={a.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.6rem 0", borderBottom: "1px solid var(--glass-border)" }}>
-                      <div>
+                    <div key={a.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.6rem 0", borderBottom: "1px solid var(--glass-border)", gap: "0.5rem", minWidth: "0" }}>
+                      <div style={{ minWidth: "0", flex: 1 }}>
                         <span style={{ fontSize: "0.88rem", fontWeight: 600 }}>{a.subject}</span>
                         <span style={{ fontSize: "0.78rem", color: "var(--text-secondary)", marginLeft: "0.4rem" }}>— {a.topic}</span>
                       </div>
-                      <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-                        <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexShrink: 0 }}>
+                        <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", whiteSpace: "nowrap" }}>
                           {new Date(a.submitted_at).toLocaleDateString()}
                         </span>
                         <span style={{ fontSize: "0.9rem", fontWeight: 700, color: scoreColor(a.score), minWidth: "42px", textAlign: "right" }}>
@@ -420,6 +438,28 @@ export default function DashboardPage() {
           </div>
         </div>
       </main>
-    </div>
+      
+      {/* Mobile responsive styles */}
+      <style jsx>{`
+        .lg\\:grid-cols-\\[1\\.3fr_1fr\\] {
+          @media (min-width: 1024px) {
+            grid-template-columns: 1.3fr 1fr;
+          }
+        }
+        
+        @media (max-width: 768px) {
+          .glass-panel {
+            padding: 1rem !important;
+          }
+        }
+        
+        @media (max-width: 640px) {
+          .main-content {
+            gap: 1rem !important;
+          }
+        }
+      `}</style>
+      </div>
+    </AuthGuard>
   );
 }

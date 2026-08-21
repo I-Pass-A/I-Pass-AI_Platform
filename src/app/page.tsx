@@ -77,12 +77,15 @@ export default function Home() {
     setForgotSubmitting(true);
     try {
       const { error: resetErr } = await supabase.auth.resetPasswordForEmail(forgotEmail, {
-        redirectTo: `${window.location.origin}/auth/callback?type=recovery`,
+        redirectTo: `${window.location.origin}/auth/reset-password`,
       });
-      if (resetErr) throw resetErr;
+      
+      // Always show success message for security (don't reveal if email exists)
       setForgotSent(true);
+      setForgotError("");
     } catch (err: any) {
-      setForgotError(err.message || (lang === "EN" ? "Failed to send reset email." : "Email erguu hin danda'amne."));
+      // Still show success to prevent email enumeration
+      setForgotSent(true);
     } finally {
       setForgotSubmitting(false);
     }
@@ -101,29 +104,40 @@ export default function Home() {
         });
         if (loginErr) throw loginErr;
       } else {
+        // Check if user is under 13 for COPPA compliance
+        const isMinor = parseInt(grade) <= 8; // Grades 6-8 typically under 13-16
+        
         const { error: signUpErr } = await supabase.auth.signUp({
           email,
           password,
           options: {
+            emailRedirectTo: `${window.location.origin}/auth/confirm`,
             data: {
               name,
               role: "student",
               grade,
               grade_taught: null,
               language: parseInt(grade) <= 8 ? "Afaan Oromo" : "English",
+              is_minor: isMinor,
+              parental_consent_required: isMinor,
+              terms_accepted: termsAccepted,
+              terms_accepted_at: new Date().toISOString(),
+              email_verified: false, // Will be set to true after email confirmation
+              is_active: true
             }
           }
         });
         if (signUpErr) throw signUpErr;
         
-        setIsLogin(true);
+        // Show verification message
         setError(
           lang === "EN" 
-            ? "Account created successfully! Please sign in using your credentials." 
-            : "Herri kee milkiin uumameera! Maaloo odeeffannoo keen seeni."
+            ? "✅ Account created! Please check your email and click the verification link to activate your account." 
+            : "✅ Herri kee uumameera! Email keessan ilaali fi link mirkaneessaa cuqaasi."
         );
         setName("");
         setPassword("");
+        setEmail("");
         setSubmitting(false);
         return;
       }
@@ -178,8 +192,8 @@ export default function Home() {
     forgotBtn: lang === "EN" ? "Send Reset Link" : "Link Ergi",
     forgotSentTitle: lang === "EN" ? "Check your email" : "Email keessan ilaali",
     forgotSentDesc: lang === "EN"
-      ? "A password reset link has been sent. Check your inbox and spam folder."
-      : "Link haaromsuu ergiameera. Inbox fi spam keessan ilaali.",
+      ? "If an account exists with this email, you'll receive a password reset link. Check your inbox and spam folder."
+      : "Yoo herri email kanaan jiraate, link haaromsuu ergama. Inbox fi spam keessan ilaali.",
     backToLogin: lang === "EN" ? "Back to Sign In" : "Gara Seensaatti Deebi'i",
   };
 
@@ -188,7 +202,7 @@ export default function Home() {
       minHeight: "100vh",
       display: "flex",
       flexDirection: "column",
-      padding: "2rem",
+      padding: "1rem",
       background: "radial-gradient(circle at 10% 20%, rgba(14, 165, 233, 0.04) 0%, transparent 40%), radial-gradient(circle at 90% 80%, rgba(20, 184, 166, 0.04) 0%, transparent 40%), var(--bg-gradient)"
     }}>
       
@@ -200,15 +214,17 @@ export default function Home() {
         width: "100%",
         maxWidth: "1200px",
         margin: "0 auto 3rem auto",
-        padding: "1rem 0"
+        padding: "1rem 0",
+        flexWrap: "wrap",
+        gap: "1rem"
       }}>
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.35rem" }}>
           <img 
             src="/logo.png" 
             alt="I-Pass-A Logo" 
-            style={{ width: "72px", height: "72px", borderRadius: "12px", objectFit: "cover" }} 
+            style={{ width: "60px", height: "60px", borderRadius: "12px", objectFit: "cover" }} 
           />
-          <span style={{ fontSize: "1.35rem", fontWeight: 800 }} className="text-gradient-primary">
+          <span style={{ fontSize: "1.2rem", fontWeight: 800 }} className="text-gradient-primary">
             I-Pass-A
           </span>
         </div>
@@ -257,10 +273,10 @@ export default function Home() {
               gap: "2.5rem"
             }}>
               <div>
-                <h1 style={{ fontSize: "3rem", fontWeight: 800, lineHeight: 1.1, marginBottom: "1rem" }}>
+                <h1 style={{ fontSize: "clamp(2rem, 5vw, 3rem)", fontWeight: 800, lineHeight: 1.1, marginBottom: "1rem", textAlign: "center" }}>
                   {t.subtitle}
                 </h1>
-                <p style={{ color: "var(--text-secondary)", fontSize: "1.15rem", lineHeight: 1.6 }}>
+                <p style={{ color: "var(--text-secondary)", fontSize: "clamp(1rem, 2.5vw, 1.15rem)", lineHeight: 1.6 }}>
                   {t.desc}
                 </p>
               </div>
@@ -284,7 +300,7 @@ export default function Home() {
               {/* Statistics Grid */}
               <div style={{
                 display: "grid",
-                gridTemplateColumns: "repeat(3, 1fr)",
+                gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
                 gap: "1.5rem",
                 width: "100%",
                 marginTop: "1.5rem"
@@ -299,7 +315,7 @@ export default function Home() {
                     className="glass-panel" 
                     style={{ padding: "1.25rem", background: "rgba(255,255,255,0.01)", textAlign: "center" }}
                   >
-                    <h3 style={{ fontSize: "1.25rem", color: "var(--primary)", fontWeight: 700 }}>
+                    <h3 style={{ fontSize: "clamp(1rem, 2.5vw, 1.25rem)", color: "var(--primary)", fontWeight: 700 }}>
                       {stat.label}
                     </h3>
                     <p style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginTop: "0.25rem" }}>
@@ -319,7 +335,7 @@ export default function Home() {
               style={{
                 width: "100%",
                 maxWidth: "420px",
-                padding: "2.5rem 2rem",
+                padding: "2rem 1.5rem",
                 position: "relative"
               }}
             >
@@ -345,13 +361,13 @@ export default function Home() {
 
               {/* Forgot password modal overlay */}
               {showForgot && (
-                <div style={{ position: "absolute", inset: 0, background: "rgba(6,11,25,0.92)", borderRadius: "var(--radius-md)", zIndex: 10, display: "flex", flexDirection: "column", justifyContent: "center", padding: "2rem" }}
+                <div style={{ position: "absolute", inset: 0, background: "rgba(6,11,25,0.92)", borderRadius: "var(--radius-md)", zIndex: 10, display: "flex", flexDirection: "column", justifyContent: "center", padding: "1.5rem" }}
                   className="animate-fade-in">
                   <h3 style={{ fontSize: "1.3rem", fontWeight: 700, marginBottom: "0.35rem" }}>{t.forgotTitle}</h3>
                   <p style={{ color: "var(--text-secondary)", fontSize: "0.85rem", marginBottom: "1.5rem" }}>{t.forgotDesc}</p>
 
                   {forgotSent ? (
-                    <div style={{ textAlign: "center", padding: "1.5rem 1rem" }}>
+                    <div style={{ textAlign: "center", padding: "1rem" }}>
                       <div style={{ fontSize: "2.5rem", marginBottom: "0.75rem" }}>📧</div>
                       <h4 style={{ fontWeight: 700, marginBottom: "0.35rem" }}>{t.forgotSentTitle}</h4>
                       <p style={{ color: "var(--text-secondary)", fontSize: "0.85rem", marginBottom: "1.5rem" }}>{t.forgotSentDesc}</p>
@@ -559,6 +575,33 @@ export default function Home() {
 
       {/* Show full footer only on hero state */}
       {viewState === "hero" && <Footer />}
+
+      {/* Mobile responsive styles */}
+      <style jsx>{`
+        @media (max-width: 768px) {
+          .glass-panel {
+            margin: 0 0.5rem;
+          }
+        }
+        
+        @media (max-width: 480px) {
+          main {
+            padding: 0.5rem !important;
+          }
+          
+          header {
+            margin-bottom: 2rem !important;
+          }
+          
+          .glass-panel {
+            padding: 1.5rem 1rem !important;
+          }
+        }
+        
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
 
     </main>
   );

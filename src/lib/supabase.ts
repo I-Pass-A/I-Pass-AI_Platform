@@ -8,8 +8,15 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "placeholder-anon-key";
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "placeholder-service-key";
 
-// Real Supabase Client
-const realSupabase = createClient(supabaseUrl, supabaseAnonKey);
+// Real Supabase Client with email confirmation enabled
+const realSupabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    flowType: 'pkce', // Use PKCE flow for better security
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: true
+  }
+});
 
 // ================= LOCAL STORAGE MOCK DATABASE LAYER =================
 class MockQueryBuilder {

@@ -11,12 +11,20 @@ interface Profile {
   grade: string | null;
   grade_taught: string | null;
   language: string;
+  email_verified: boolean;
+  is_active: boolean;
+  is_minor: boolean;
+  parental_consent_required: boolean;
+  parental_consent_given: boolean;
 }
 
 interface AuthContextType {
   user: Profile | null;
   session: Session | null;
   loading: boolean;
+  isEmailVerified: boolean;
+  isAccountActive: boolean;
+  needsParentalConsent: boolean;
   logout: () => Promise<void>;
   updateUserLanguage: (lang: string) => Promise<void>;
   updateUserGrade: (grade: string) => Promise<void>;
@@ -34,7 +42,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const { data, error } = await supabase
         .from("profiles")
-        .select("*")
+        .select(`
+          id, name, role, grade, grade_taught, language,
+          email_verified, is_active, is_minor, 
+          parental_consent_required, parental_consent_given
+        `)
         .eq("id", userId)
         .single();
 
@@ -115,11 +127,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  // Computed values for authentication checks
+  const isEmailVerified = user?.email_verified ?? false;
+  const isAccountActive = user?.is_active ?? false;
+  const needsParentalConsent = (user?.is_minor && user?.parental_consent_required && !user?.parental_consent_given) ?? false;
+
   return (
     <AuthContext.Provider value={{ 
       user, 
       session, 
       loading, 
+      isEmailVerified,
+      isAccountActive,
+      needsParentalConsent,
       logout, 
       updateUserLanguage, 
       updateUserGrade,

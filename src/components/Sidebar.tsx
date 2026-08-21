@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import {
   MessageSquare,
@@ -13,6 +13,8 @@ import {
   BookOpen,
   History,
   Eye,
+  Menu,
+  X,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -20,6 +22,25 @@ import { usePathname } from "next/navigation";
 export default function Sidebar() {
   const { user, logout, updateUserLanguage, updateUserGrade } = useAuth();
   const pathname = usePathname();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  // Close mobile menu when pathname changes
+  useEffect(() => {
+    setIsMobileMenuOpen(false);
+  }, [pathname]);
+
+  // Close mobile menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (isMobileMenuOpen && !target.closest('[data-mobile-sidebar]') && !target.closest('[data-mobile-toggle]')) {
+        setIsMobileMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isMobileMenuOpen]);
 
   if (!user) return null;
 
@@ -86,63 +107,35 @@ export default function Sidebar() {
     },
   ];
 
-  return (
-    <aside className="glass-panel" style={{
-      width: "280px",
-      minWidth: "280px",
-      height: "100vh",
-      borderRadius: "0",
-      borderRight: "1px solid var(--glass-border)",
-      borderTop: "none",
-      borderBottom: "none",
-      borderLeft: "none",
-      display: "flex",
-      flexDirection: "column",
-      background: "var(--sidebar-bg)",
-      zIndex: 100
-    }}>
+  const SidebarContent = () => (
+    <div className="flex flex-col h-full">
       {/* Brand Header */}
-      <div style={{
-        padding: "2rem 1.5rem",
-        borderBottom: "1px solid var(--glass-border)",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        gap: "0.75rem",
-        textAlign: "center"
-      }}>
+      <div className="p-4 md:p-6 lg:p-8 border-b border-white/20 flex flex-col items-center gap-3 text-center">
         <img 
           src="/logo.png" 
           alt="I-Pass-A Logo" 
-          style={{ width: "88px", height: "88px", borderRadius: "16px", objectFit: "cover" }} 
+          className="w-16 h-16 md:w-20 md:h-20 lg:w-22 lg:h-22 rounded-2xl object-cover" 
         />
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-          <h2 style={{ fontSize: "1.45rem", fontWeight: 800, margin: 0 }} className="text-gradient-primary">
+        <div className="flex flex-col items-center">
+          <h2 className="text-xl md:text-2xl font-bold text-gradient-primary">
             I-Pass-A
           </h2>
-          <span style={{ fontSize: "0.7rem", color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.05em", marginTop: "0.15rem" }}>
+          <span className="text-xs text-gray-400 uppercase tracking-wider">
             AI Tutor & Exam Prep
           </span>
         </div>
       </div>
 
       {/* Grade & Language Control Panel */}
-      <div style={{
-        padding: "1.5rem",
-        borderBottom: "1px solid var(--glass-border)",
-        display: "flex",
-        flexDirection: "column",
-        gap: "1rem"
-      }}>
-        <div className="form-group" style={{ margin: 0 }}>
-          <label className="form-label" style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+      <div className="p-4 md:p-6 border-b border-white/20 space-y-4">
+        <div>
+          <label className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2">
             <GraduationCap size={16} /> {user.language === "Afaan Oromo" ? "Kutaa" : "Grade"}
           </label>
           <select 
-            className="form-select" 
             value={user.grade || "9"} 
             onChange={handleGradeChange}
-            style={{ padding: "0.5rem 0.75rem", fontSize: "0.85rem", background: "rgba(0,0,0,0.4)" }}
+            className="w-full px-3 py-2 bg-black/40 border border-white/20 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             {["6", "8", "12"].map((g) => (
               <option key={g} value={g}>{user.language === "Afaan Oromo" ? `Kutaa ${g}` : `Grade ${g}`}</option>
@@ -150,30 +143,14 @@ export default function Sidebar() {
           </select>
         </div>
 
-        <div style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "0.5rem",
-          fontSize: "0.8rem",
-          color: "var(--text-secondary)",
-          background: "rgba(255, 255, 255, 0.02)",
-          padding: "0.5rem 0.75rem",
-          borderRadius: "var(--radius-sm)",
-          border: "1px solid var(--glass-border)"
-        }}>
-          <Globe size={14} style={{ color: "var(--secondary)" }} />
-          <span>{user.language === "Afaan Oromo" ? "Afaan" : "Language"}: <strong>{user.language}</strong></span>
+        <div className="flex items-center gap-2 text-xs text-gray-400 bg-white/5 p-3 rounded-lg border border-white/10">
+          <Globe size={14} className="text-blue-400" />
+          <span>{user.language === "Afaan Oromo" ? "Afaan" : "Language"}: <strong className="text-white">{user.language}</strong></span>
         </div>
       </div>
 
       {/* Navigation Links */}
-      <nav style={{
-        flex: 1,
-        padding: "1.5rem 1rem",
-        display: "flex",
-        flexDirection: "column",
-        gap: "0.5rem"
-      }}>
+      <nav className="flex-1 p-4 md:p-6 space-y-2">
         {navItems
           .filter(item => item.roles.includes(user.role))
           .map((item) => {
@@ -184,23 +161,13 @@ export default function Sidebar() {
               <Link 
                 key={item.path + item.name} 
                 href={item.path}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "0.75rem",
-                  padding: "0.85rem 1rem",
-                  borderRadius: "var(--radius-sm)",
-                  color: isActive ? "#fff" : "var(--text-secondary)",
-                  background: isActive ? "var(--glass-active)" : "transparent",
-                  borderLeft: isActive ? "3px solid var(--primary)" : "3px solid transparent",
-                  textDecoration: "none",
-                  fontWeight: isActive ? 600 : 500,
-                  fontSize: "0.95rem",
-                  transition: "all var(--transition-fast)"
-                }}
-                className={!isActive ? "glass-panel-hover" : ""}
+                className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all text-sm md:text-base ${
+                  isActive 
+                    ? 'bg-blue-600/20 text-white border-l-4 border-blue-500' 
+                    : 'text-gray-300 hover:bg-white/5 hover:text-white'
+                }`}
               >
-                <Icon size={18} style={{ color: isActive ? "var(--primary)" : "inherit" }} />
+                <Icon size={18} className={isActive ? "text-blue-400" : ""} />
                 {item.name}
               </Link>
             );
@@ -208,33 +175,16 @@ export default function Sidebar() {
       </nav>
 
       {/* User Footer Profile */}
-      <div style={{
-        padding: "1.5rem",
-        borderTop: "1px solid var(--glass-border)",
-        display: "flex",
-        flexDirection: "column",
-        gap: "0.75rem"
-      }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-          <div style={{
-            width: "36px",
-            height: "36px",
-            borderRadius: "50%",
-            background: "rgba(255, 255, 255, 0.08)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontSize: "0.9rem",
-            fontWeight: "bold",
-            color: "var(--primary)"
-          }}>
+      <div className="p-4 md:p-6 border-t border-white/20 space-y-3">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-sm font-bold text-blue-400">
             {user.name.split(" ").map(n => n[0]).join("").toUpperCase()}
           </div>
-          <div style={{ overflow: "hidden" }}>
-            <h4 style={{ fontSize: "0.875rem", margin: 0, textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap" }}>
+          <div className="flex-1 min-w-0">
+            <h4 className="text-sm font-medium text-white truncate">
               {user.name}
             </h4>
-            <span style={{ fontSize: "0.75rem", color: "var(--text-secondary)", textTransform: "capitalize" }}>
+            <span className="text-xs text-gray-400 capitalize">
               {user.role === "student"
                 ? (isAO ? "Barataa" : "Student")
                 : user.role === "teacher"
@@ -245,38 +195,52 @@ export default function Sidebar() {
             </span>
           </div>
         </div>
+        
         <button
           onClick={logout}
-          style={{
-            width: "100%",
-            padding: "0.6rem 1rem",
-            fontSize: "0.85rem",
-            fontFamily: "var(--font-outfit)",
-            fontWeight: 600,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: "0.5rem",
-            background: "rgba(239, 68, 68, 0.08)",
-            border: "1px solid rgba(239, 68, 68, 0.25)",
-            borderRadius: "var(--radius-sm)",
-            color: "var(--danger)",
-            cursor: "pointer",
-            transition: "all var(--transition-fast)",
-          }}
-          onMouseEnter={e => {
-            e.currentTarget.style.background = "rgba(239,68,68,0.15)";
-            e.currentTarget.style.borderColor = "rgba(239,68,68,0.45)";
-          }}
-          onMouseLeave={e => {
-            e.currentTarget.style.background = "rgba(239,68,68,0.08)";
-            e.currentTarget.style.borderColor = "rgba(239,68,68,0.25)";
-          }}
+          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 hover:border-red-500/50 rounded-lg text-red-400 text-sm font-medium transition-colors"
         >
           <LogOut size={15} />
           {user.language === "Afaan Oromo" ? "Ba'i" : "Log Out"}
         </button>
       </div>
-    </aside>
+    </div>
+  );
+
+  return (
+    <>
+      {/* Mobile Menu Toggle Button */}
+      <button
+        data-mobile-toggle
+        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+        className="md:hidden fixed top-4 left-4 z-50 p-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white"
+      >
+        {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+      </button>
+
+      {/* Desktop Sidebar */}
+      <aside className="hidden md:flex fixed left-0 top-0 w-64 lg:w-72 h-full bg-black/40 backdrop-blur-md border-r border-white/20 z-40">
+        <SidebarContent />
+      </aside>
+
+      {/* Mobile Sidebar */}
+      {isMobileMenuOpen && (
+        <>
+          {/* Backdrop */}
+          <div className="md:hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-40" />
+          
+          {/* Mobile Sidebar */}
+          <aside 
+            data-mobile-sidebar
+            className="md:hidden fixed left-0 top-0 w-80 h-full bg-black/90 backdrop-blur-md border-r border-white/20 z-50 transform transition-transform"
+          >
+            <SidebarContent />
+          </aside>
+        </>
+      )}
+
+      {/* Spacer for desktop */}
+      <div className="hidden md:block w-64 lg:w-72 flex-shrink-0" />
+    </>
   );
 }

@@ -55,6 +55,8 @@ const GEMINI_KEYS = [
   process.env.GEMINI_API_KEY,
   process.env.GEMINI_API_KEY_2,
   process.env.GEMINI_API_KEY_3,
+  process.env.GEMINI_API_KEY_4,
+  process.env.GEMINI_API_KEY_5,
 ].filter(Boolean);
 
 let currentKeyIndex = 0;
@@ -103,16 +105,16 @@ const GRADE_CONFIGS = {
 
 // Filename stem → subject name (must match src/lib/subjects.ts exactly)
 const SUBJECT_MAP = {
-  "g12-mathematics":      "Mathematics",
-  "g12-physics":          "Physics",
-  "g12-english":          "English",
-  "g12-biology":          "Biology",
+  "g12-agriculture":      "Agriculture",
+  "g12-biology":          "Biology", 
   "g12-chemistry":        "Chemistry",
-  "g12-it":               "IT",
+  "g12-economics":        "Economics",
+  "g12-english":          "English",
   "g12-geography":        "Geography",
   "g12-history":          "History",
-  "g12-economics":        "Economics",
-  "g12-agriculture":      "Agriculture",
+  "g12-it":               "IT",
+  "g12-mathematics":      "Mathematics",
+  "g12-physics":          "Physics",
   "g6-afaan-oromo":       "Afaan Oromo",
   "g6-herrega":           "Herrega",
   "g6-saayinsii":         "Saayinsii",
