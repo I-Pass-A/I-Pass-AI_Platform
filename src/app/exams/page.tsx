@@ -108,7 +108,10 @@ function ExamTaker({
     } catch (e) { console.error(e); } finally { setSubmitting(false); }
   };
 
-  const allAnswered = exam.questions.every((q) => answers[q.id] !== undefined && answers[q.id] !== "");
+  const allAnswered = exam.questions.every((q) => {
+    const ans = answers[q.id];
+    return ans !== undefined && ans.toString().trim() !== "";
+  });
 
   return (
     <div className="glass-panel animate-fade-in" style={{ padding: "2rem" }}>
@@ -193,9 +196,23 @@ function ExamTaker({
       </div>
 
       {!assessment && !assignmentResult && (
-        <div style={{ marginTop: "2rem", borderTop: "1px solid var(--glass-border)", paddingTop: "1.5rem", display: "flex", justifyContent: "flex-end" }}>
-          <button onClick={handleSubmit} className="btn btn-primary" disabled={submitting || !allAnswered}>
-            {submitting ? "..." : (isAO ? "Qormaata Ergi" : "Submit Answers")}
+        <div style={{ marginTop: "2rem", borderTop: "1px solid var(--glass-border)", paddingTop: "1.5rem", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "1rem" }}>
+          <span style={{ fontSize: "0.85rem", color: allAnswered ? "var(--success)" : "var(--text-secondary)" }}>
+            {allAnswered
+              ? (isAO ? "✓ Gaaffilee hunda deebiste" : "✓ All questions answered")
+              : (isAO
+                  ? `Gaaffilee ${exam.questions.filter(q => !answers[q.id]?.toString().trim()).length} hin deebifne`
+                  : `${exam.questions.filter(q => !answers[q.id]?.toString().trim()).length} question${exam.questions.filter(q => !answers[q.id]?.toString().trim()).length !== 1 ? "s" : ""} remaining`)}
+          </span>
+          <button
+            onClick={handleSubmit}
+            className="btn btn-primary"
+            disabled={submitting || !allAnswered}
+            style={{ minWidth: "160px", opacity: allAnswered ? 1 : 0.5 }}
+          >
+            {submitting
+              ? <><span style={{ display: "inline-block", width: "14px", height: "14px", border: "2px solid rgba(255,255,255,0.3)", borderTopColor: "#fff", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} /> {isAO ? "Ergamaa..." : "Submitting..."}</>
+              : <><Send size={15} /> {isAO ? "Qormaata Ergi" : "Submit Answers"}</>}
           </button>
         </div>
       )}
@@ -219,6 +236,7 @@ export default function ExamsPage() {
   const [subject, setSubject] = useState("");
   const [topic, setTopic] = useState("");
   const [difficulty, setDifficulty] = useState("medium");
+  const [questionCount, setQuestionCount] = useState(10);
   const [examTypes, setExamTypes] = useState<string[]>(["multiple_choice"]);
   const [generating, setGenerating] = useState(false);
   const [generateError, setGenerateError] = useState("");
@@ -356,7 +374,7 @@ export default function ExamsPage() {
       const res = await fetch("/api/exams/generate", {
         method: "POST",
         headers: authHeaders(),
-        body: JSON.stringify({ subject, topic, difficulty, grade: activeGrade ?? "12", question_types: examTypes }),
+        body: JSON.stringify({ subject, topic, difficulty, grade: activeGrade ?? "12", question_types: examTypes, question_count: questionCount }),
       });
       const data = await res.json();
       if (res.ok) { setGeneratedExam(data); fetchSavedExams(); }
@@ -586,29 +604,39 @@ export default function ExamsPage() {
 
         {/* Tab bar */}
         <div className="no-print" style={{ 
-          display: "flex", gap: "0.35rem", marginBottom: "2rem", 
-          borderBottom: "1px solid var(--glass-border)", paddingBottom: "0",
-          overflowX: "auto", // Enable horizontal scrolling on mobile
-          scrollbarWidth: "none", // Hide scrollbar
-          msOverflowStyle: "none", // Hide scrollbar for IE
-          WebkitOverflowScrolling: "touch" // Smooth scrolling on iOS
+          display: "flex",
+          gap: "0.25rem",
+          marginBottom: "2rem", 
+          borderBottom: "1px solid var(--glass-border)",
+          overflowX: "auto",
+          scrollbarWidth: "none",
+          msOverflowStyle: "none",
+          WebkitOverflowScrolling: "touch"
         }}>
           {tabs.map((t) => (
             <button
               key={t.id}
               onClick={() => setTab(t.id)}
               style={{
-                display: "flex", alignItems: "center", gap: "0.4rem",
-                padding: "0.65rem 1.1rem", fontSize: "0.88rem", fontWeight: tab === t.id ? 600 : 400,
-                background: "transparent", border: "none", cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: "0.5rem",
+                padding: "0.75rem 1.25rem",
+                fontSize: "0.875rem",
+                fontWeight: tab === t.id ? 600 : 400,
+                background: "transparent",
+                border: "none",
+                cursor: "pointer",
                 color: tab === t.id ? "var(--primary)" : "var(--text-secondary)",
                 borderBottom: tab === t.id ? "2px solid var(--primary)" : "2px solid transparent",
-                marginBottom: "-1px", transition: "all 0.15s",
-                whiteSpace: "nowrap", // Prevent text wrapping
-                flexShrink: 0 // Prevent button shrinking
+                marginBottom: "-1px",
+                transition: "all 0.15s",
+                whiteSpace: "nowrap",
+                flexShrink: 0,
+                borderRadius: "8px 8px 0 0"
               }}
             >
-              {t.icon} <span className="hidden sm:inline">{t.label}</span>
+              {t.icon} {t.label}
             </button>
           ))}
         </div>
@@ -686,6 +714,32 @@ export default function ExamsPage() {
                       <option value="medium">{isAO ? "Giddu-galeessa" : "Medium"}</option>
                       <option value="hard">{isAO ? "Jabaa" : "Hard"}</option>
                     </select>
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">{isAO ? "Lakkoofsa Gaaffilee" : "Number of Questions"}</label>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "0.5rem" }}>
+                      {[5, 10, 15, 20].map((n) => (
+                        <button
+                          key={n}
+                          type="button"
+                          onClick={() => setQuestionCount(n)}
+                          style={{
+                            padding: "0.6rem",
+                            borderRadius: "8px",
+                            border: "1px solid",
+                            borderColor: questionCount === n ? "var(--primary)" : "var(--glass-border)",
+                            background: questionCount === n ? "rgba(14,165,233,0.12)" : "var(--glass-bg)",
+                            color: questionCount === n ? "var(--primary)" : "var(--text-secondary)",
+                            fontWeight: questionCount === n ? 700 : 400,
+                            fontSize: "1rem",
+                            cursor: "pointer",
+                            transition: "all 0.15s"
+                          }}
+                        >
+                          {n}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                   <div className="form-group" style={{ marginBottom: "1.5rem" }}>
                     <label className="form-label">{isAO ? "Gosa Gaaffilee" : "Question Types"}</label>
