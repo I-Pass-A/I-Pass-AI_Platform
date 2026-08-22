@@ -117,3 +117,4 @@ Open your browser and navigate to **`http://localhost:3000`**.
 2. **💬 Conversational AI Tutor**: Study in Afaan Oromo for Grades 6 & 8, or English for Grade 12. The RAG pipeline fetches textbook snippets, displays citation sources, and answers step-by-step.
 3. **📝 National Exam Prep**: Generate custom tests on any Grade 6, 8, or 12 topic. Supports multiple-choice, true/false, fill-in-the-blank, and definition question formats. Click **Print / Export** to export clean, printer-friendly test sheets!
 4. **⚙️ Admin Dashboard**: Teachers and administrators can upload curriculum textbooks. Text is parsed, split into overlaps, embedded via Gemini, and saved to the vector database with an audit uploader trail.
+python -m uvicorn backend_app.main:app --reload
