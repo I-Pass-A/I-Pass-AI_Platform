@@ -6,12 +6,24 @@
 interface AIProvider {
   name: string;
   model: string;
-  call: (messages: any[]) => Promise<string>;
+  call: (messages: any[], jsonMode?: boolean) => Promise<string>;
   timeout: number;
 }
 
 // OpenRouter API call with different models
-async function callOpenRouter(messages: any[], model: string, providerName: string): Promise<string> {
+async function callOpenRouter(messages: any[], model: string, providerName: string, jsonMode = false): Promise<string> {
+  const body: any = {
+    model,
+    messages,
+    max_tokens: 2000,
+    temperature: 0.3,
+  };
+
+  // Enable JSON mode for models that support it
+  if (jsonMode) {
+    body.response_format = { type: "json_object" };
+  }
+
   const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
     method: "POST",
     headers: {
@@ -20,12 +32,7 @@ async function callOpenRouter(messages: any[], model: string, providerName: stri
       "HTTP-Referer": process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
       "X-Title": "I-Pass-A Tutor"
     },
-    body: JSON.stringify({
-      model,
-      messages,
-      max_tokens: 800,
-      temperature: 0.7
-    })
+    body: JSON.stringify(body)
   });
 
   if (!response.ok) {
@@ -41,21 +48,21 @@ async function callOpenRouter(messages: any[], model: string, providerName: stri
 const AI_PROVIDERS: AIProvider[] = [
   {
     name: "OpenRouter-Llama-Fast",
-    model: "meta-llama/llama-3.1-8b-instruct:free", // Fastest free model
-    call: (messages) => callOpenRouter(messages, "meta-llama/llama-3.1-8b-instruct:free", "OpenRouter-Llama-Fast"),
-    timeout: 8000 // 8 seconds
-  },
-  {
-    name: "OpenRouter-Claude-Haiku",
-    model: "anthropic/claude-3-haiku", // Fast paid model
-    call: (messages) => callOpenRouter(messages, "anthropic/claude-3-haiku", "OpenRouter-Claude-Haiku"),
-    timeout: 12000 // 12 seconds
+    model: "meta-llama/llama-3.1-8b-instruct:free",
+    call: (messages, jsonMode) => callOpenRouter(messages, "meta-llama/llama-3.1-8b-instruct:free", "OpenRouter-Llama-Fast", jsonMode),
+    timeout: 25000
   },
   {
     name: "OpenRouter-GPT-4o-Mini",
-    model: "openai/gpt-4o-mini", // Reliable backup
-    call: (messages) => callOpenRouter(messages, "openai/gpt-4o-mini", "OpenRouter-GPT-4o-Mini"),
-    timeout: 15000 // 15 seconds
+    model: "openai/gpt-4o-mini",
+    call: (messages, jsonMode) => callOpenRouter(messages, "openai/gpt-4o-mini", "OpenRouter-GPT-4o-Mini", jsonMode),
+    timeout: 30000
+  },
+  {
+    name: "OpenRouter-Claude-Haiku",
+    model: "anthropic/claude-3-haiku",
+    call: (messages, jsonMode) => callOpenRouter(messages, "anthropic/claude-3-haiku", "OpenRouter-Claude-Haiku", false),
+    timeout: 30000
   }
 ];
 
@@ -64,7 +71,8 @@ const AI_PROVIDERS: AIProvider[] = [
  */
 export async function generateWithMultiProvider(
   systemPrompt: string,
-  userPrompt: string
+  userPrompt: string,
+  jsonMode = false
 ): Promise<string> {
   const messages = [
     { role: "system", content: systemPrompt },
@@ -73,35 +81,29 @@ export async function generateWithMultiProvider(
 
   let lastError: Error | null = null;
 
-  // Debug: Check if OpenRouter API key is loaded
   console.log('🔑 OpenRouter API Key loaded:', !!process.env.OPENROUTER_API_KEY);
 
-  // Try each model in order (fastest/cheapest first)
   for (const provider of AI_PROVIDERS) {
     try {
-      console.log(`🚀 Trying ${provider.name} (${provider.model})...`);
+      console.log(`🚀 Trying ${provider.name}...`);
       
       const response = await Promise.race([
-        provider.call(messages),
+        provider.call(messages, jsonMode),
         new Promise<never>((_, reject) =>
           setTimeout(() => reject(new Error(`${provider.name} timeout`)), provider.timeout)
         )
       ]);
 
-      console.log(`✅ ${provider.name} succeeded in < ${provider.timeout}ms`);
+      console.log(`✅ ${provider.name} succeeded`);
       return response;
 
     } catch (error: any) {
       lastError = error;
       console.log(`❌ ${provider.name} failed: ${error.message}`);
-      
-      // Continue to next model
       continue;
     }
   }
 
-  // All models failed - throw error
-  console.error("🔥 All OpenRouter models failed");
   throw new Error(`All AI models failed. Last error: ${lastError?.message}`);
 }
 

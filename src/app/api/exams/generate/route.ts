@@ -49,56 +49,59 @@ export async function POST(req: NextRequest) {
     }
 
     // 2. Build prompt
-    const systemPrompt = `You are an expert exam generator for the Ethiopian school curriculum.
+    const systemPrompt = `You are an exam generator. Output ONLY raw JSON with no explanation, no markdown, no preamble.
 
-REQUIREMENTS:
+EXAM SPEC:
 - Subject: ${subject}
 - Topic: ${topic}
 - Grade: ${gradeBand}
 - Language: ${language}
 - Difficulty: ${difficulty || "medium"}
-- Total questions: ${totalQuestions}
-- Distribution: ${typeDist}
+- Total questions: ${totalQuestions} (distribution: ${typeDist})
 
 ${contextBlock ? `CURRICULUM CONTEXT:\n${contextBlock}\n` : ""}
 
-RULES:
-1. Generate EXACTLY ${totalQuestions} questions total
-2. Use ONLY the specified question types
-3. For multiple_choice: always provide exactly 4 options array
-4. For true_false: provide options ["True","False"] (or ["Dhugaa","Soba"] for Afaan Oromo)
-5. For blank_space / definition: no options field needed
-6. All text must be in ${language}
-7. Answer key must have one entry per question
-
-Return ONLY valid JSON (no markdown, no explanation) in EXACTLY this format:
+OUTPUT FORMAT (raw JSON only, nothing else before or after):
 {
   "questions": [
-    {"id": 1, "type": "multiple_choice", "question_text": "...", "options": ["A","B","C","D"]},
-    {"id": 2, "type": "true_false",      "question_text": "...", "options": ["True","False"]},
-    {"id": 3, "type": "blank_space",     "question_text": "Complete: ___ is ..."},
-    {"id": 4, "type": "definition",      "question_text": "Define: ..."}
+    {"id": 1, "type": "multiple_choice", "question_text": "...", "options": ["A. ...", "B. ...", "C. ...", "D. ..."]},
+    {"id": 2, "type": "true_false", "question_text": "...", "options": ["True", "False"]},
+    {"id": 3, "type": "blank_space", "question_text": "The ___ is responsible for ..."},
+    {"id": 4, "type": "definition", "question_text": "Define: photosynthesis"}
   ],
   "answer_key": [
-    {"id": 1, "correct_answer": "B", "explanation": "Because..."},
-    {"id": 2, "correct_answer": "True", "explanation": "Because..."},
-    {"id": 3, "correct_answer": "photosynthesis", "explanation": "Because..."},
-    {"id": 4, "correct_answer": "The process of ...", "explanation": ""}
+    {"id": 1, "correct_answer": "A. ...", "explanation": "..."},
+    {"id": 2, "correct_answer": "True", "explanation": "..."},
+    {"id": 3, "correct_answer": "mitochondria", "explanation": "..."},
+    {"id": 4, "correct_answer": "Photosynthesis is ...", "explanation": ""}
   ]
 }`;
 
     const userPrompt = `Generate ${totalQuestions} exam questions about "${topic}" for Grade ${gradeBand} in ${language}. Distribution: ${typeDist}.`;
 
-    // 3. Call AI
-    const raw = await generateWithMultiProvider(systemPrompt, userPrompt);
+    // 3. Call AI with JSON mode enabled
+    const raw = await generateWithMultiProvider(systemPrompt, userPrompt, true);
 
-    // 4. Parse JSON (strip markdown fences if present)
+    // 4. Parse JSON (handle markdown fences, extract JSON from anywhere in response)
     let examData: { questions: any[]; answer_key: any[] };
     try {
-      const cleaned = raw.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
-      examData = JSON.parse(cleaned);
-    } catch {
-      console.error("Failed to parse AI response:", raw.slice(0, 300));
+      // Strip markdown fences
+      let cleaned = raw.replace(/```json\n?/gi, "").replace(/```\n?/g, "").trim();
+      
+      // Try direct parse first
+      try {
+        examData = JSON.parse(cleaned);
+      } catch {
+        // Extract JSON object from within the response text
+        const jsonMatch = cleaned.match(/\{[\s\S]*"questions"[\s\S]*"answer_key"[\s\S]*\}/);
+        if (jsonMatch) {
+          examData = JSON.parse(jsonMatch[0]);
+        } else {
+          throw new Error("No valid JSON found in AI response");
+        }
+      }
+    } catch (parseErr) {
+      console.error("Failed to parse AI response. Raw response (first 500 chars):", raw.slice(0, 500));
       return NextResponse.json({
         detail: language === "Afaan Oromo"
           ? "Deebii AI sirrii hin taane. Maaloo irra deebi'ii yaali."
