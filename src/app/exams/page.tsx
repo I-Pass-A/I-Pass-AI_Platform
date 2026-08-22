@@ -299,12 +299,22 @@ export default function ExamsPage() {
     if (!user) return;
     setFetchingSaved(true);
     try {
-      const { data } = await supabase
+      let query = supabase
         .from("exams")
-        .select("id, subject, topic, difficulty, grade, questions, created_at")
+        .select("id, subject, topic, difficulty, grade, questions, created_at, created_by")
         .eq("grade", activeGrade ?? "12")
         .order("created_at", { ascending: false });
-      setSavedExams((data || []).map((ex: any) => ({ ...ex, question_count: Array.isArray(ex.questions) ? ex.questions.length : 0 })));
+
+      // Teachers/admins only see their own exams; students see all grade exams
+      if (isTeacher) {
+        query = query.eq("created_by", user.id);
+      }
+
+      const { data } = await query;
+      setSavedExams((data || []).map((ex: any) => ({
+        ...ex,
+        question_count: Array.isArray(ex.questions) ? ex.questions.length : 0
+      })));
     } catch (e) { console.error(e); } finally { setFetchingSaved(false); }
   };
 
@@ -431,10 +441,12 @@ export default function ExamsPage() {
   // ── Tab nav items ──────────────────────────────────────────────────────────
 
   const tabs: { id: Tab; label: string; icon: React.ReactNode }[] = [
-    { id: "my-exams",      label: isAO ? "Qormaata Ol-kaayame" : "My Exams",          icon: <FileText size={15} /> },
-    { id: "generator",     label: isAO ? "AI Uumi"             : "AI Generator",       icon: <Plus size={15} /> },
-    ...(isTeacher ? [{ id: "my-assignments" as Tab, label: isAO ? "Ramaddii Koo" : "My Assignments", icon: <ClipboardList size={15} /> }] : []),
-    ...(!isTeacher ? [{ id: "from-teacher" as Tab, label: isAO ? "Barsiisaa Irraa" : "From Teacher", icon: <BookOpen size={15} /> }] : []),
+    { id: "my-exams",  label: isAO ? "Qormaata Koo"   : "My Exams",       icon: <FileText size={15} /> },
+    { id: "generator", label: isAO ? "AI Uumi"         : "AI Generator",   icon: <Plus size={15} /> },
+    ...(isTeacher
+      ? [{ id: "my-assignments" as Tab, label: isAO ? "Ramaddii Koo" : "My Assignments", icon: <ClipboardList size={15} /> }]
+      : [{ id: "from-teacher"   as Tab, label: isAO ? "Barsiisaa Irraa" : "From Teacher", icon: <BookOpen size={15} /> }]
+    ),
   ];
 
   // ─── Render ────────────────────────────────────────────────────────────────

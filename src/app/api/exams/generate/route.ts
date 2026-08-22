@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { generateWithMultiProvider } from "@/lib/ai/multi-provider";
 
@@ -8,6 +9,16 @@ export async function POST(req: NextRequest) {
 
     if (!subject || !topic) {
       return NextResponse.json({ detail: "subject and topic are required" }, { status: 400 });
+    }
+
+    const supabaseAdmin = getSupabaseAdmin();
+
+    // Get authenticated user
+    const authHeader = req.headers.get("authorization");
+    let userId: string | null = null;
+    if (authHeader?.startsWith("Bearer ")) {
+      const { data: { user } } = await supabaseAdmin.auth.getUser(authHeader.substring(7));
+      userId = user?.id ?? null;
     }
 
     const supabaseAdmin = getSupabaseAdmin();
@@ -120,9 +131,10 @@ OUTPUT FORMAT (raw JSON only, nothing else before or after):
         subject,
         topic,
         difficulty: difficulty || "medium",
-        grade: gradeBand,
+        grade:       gradeBand,
         questions:   examData.questions,
         answer_key:  examData.answer_key || [],
+        created_by:  userId,
       })
       .select("id, subject, topic, difficulty, grade, questions, created_at")
       .single();
