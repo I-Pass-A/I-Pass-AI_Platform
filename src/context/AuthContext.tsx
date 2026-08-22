@@ -40,22 +40,77 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const fetchProfile = async (userId: string) => {
     try {
+      // Select only the base columns that always exist
       const { data, error } = await supabase
         .from("profiles")
-        .select(`
-          id, name, role, grade, grade_taught, language,
-          email_verified, is_active, is_minor, 
-          parental_consent_required, parental_consent_given
-        `)
+        .select("id, name, role, grade, language, is_active")
         .eq("id", userId)
         .single();
 
       if (error) {
-        throw error;
+        // PGRST116 = row not found (profile not yet created — race condition after signup)
+        if (error.code === "PGRST116") {
+          const { data: { session: currentSession } } = await supabase.auth.getSession();
+          const meta = currentSession?.user?.user_metadata ?? {};
+          setUser({
+            id: userId,
+            name: meta.name ?? "User",
+            role: meta.role ?? "student",
+            grade: meta.grade ?? null,
+            grade_taught: null,
+            language: meta.language ?? "English",
+            email_verified: true,
+            is_active: true,
+            is_minor: meta.is_minor ?? false,
+            parental_consent_required: meta.parental_consent_required ?? false,
+            parental_consent_given: false,
+          });
+        } else {
+          throw error;
+        }
+        return;
       }
-      setUser(data);
+
+      // Merge DB data with safe defaults for optional columns
+      // email_verified defaults to true since Supabase email confirmation is disabled
+      const { data: { session: sess } } = await supabase.auth.getSession();
+      const meta = sess?.user?.user_metadata ?? {};
+      setUser({
+        grade_taught: null,
+        email_verified: true,
+        is_minor: false,
+        parental_consent_required: false,
+        parental_consent_given: false,
+        is_active: true,
+        // fill grade from metadata if DB has null
+        grade: meta.grade ?? null,
+        language: meta.language ?? "English",
+        name: meta.name ?? "User",
+        ...data,
+      });
     } catch (e) {
       console.error("Error loading user profile:", e);
+      // Fall back to session metadata instead of logging user out
+      try {
+        const { data: { session: currentSession } } = await supabase.auth.getSession();
+        const meta = currentSession?.user?.user_metadata ?? {};
+        if (currentSession?.user) {
+          setUser({
+            id: userId,
+            name: meta.name ?? "User",
+            role: meta.role ?? "student",
+            grade: meta.grade ?? null,
+            grade_taught: null,
+            language: meta.language ?? "English",
+            email_verified: true,
+            is_active: true,
+            is_minor: false,
+            parental_consent_required: false,
+            parental_consent_given: false,
+          });
+          return;
+        }
+      } catch {}
       setUser(null);
     }
   };

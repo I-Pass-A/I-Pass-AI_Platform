@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/context/AuthContext";
@@ -71,7 +71,9 @@ export default function TutorPage() {
   if (loading || !user) return null;
 
   // Determine subject list: teachers use their grade_taught, students use their grade
-  const activeGrade = user.role === "teacher" ? (user.grade_taught ?? user.grade) : user.grade;
+  const activeGrade = user.role === "teacher"
+    ? (user.grade_taught ?? user.grade ?? "12")
+    : (user.grade ?? "12");
   const subjects = getSubjectsForGrade(activeGrade);
   const isAO = user.language === "Afaan Oromo";
 
@@ -85,8 +87,8 @@ export default function TutorPage() {
     curriculumBanner: isAO ? "Seera Caasluga Kuusaa (RAG)" : "Curriculum Grounded (RAG)",
     noActiveSessionHeader: isAO ? "Haasawa Eegaluu" : "No Active Session",
     noActiveSessionDesc: isAO 
-      ? `Gosa barnootaa bitaa irraa filachuudhaan haasawa haaraa kutaa ${user.grade} jalqabi.`
-      : `Select a subject on the left to start a new chat session grounded in your Grade ${user.grade} curriculum.`,
+      ? `Gosa barnootaa bitaa irraa filachuudhaan haasawa haaraa kutaa ${activeGrade} jalqabi.`
+      : `Select a subject on the left to start a new chat session grounded in your Grade ${activeGrade} curriculum.`,
     newChatHeader: isAO ? `Tutor ${selectedSubject} Haaraa` : `New ${selectedSubject} Chat`,
     newChatDesc: isAO
       ? "Gaaffii kee barreessi (fkn, yaad-rimee ibsi, caasluga qoradhu) gargaarsa argachuuf!"
@@ -260,247 +262,223 @@ export default function TutorPage() {
 
   return (
     <AuthGuard>
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex">
+      <div style={{ display: "flex", minHeight: "100vh", background: "var(--bg-gradient)" }}>
         <Sidebar />
-      
-      <main className="flex-1 flex flex-col md:flex-row">
-        
-        {/* Chat History Panel (Mobile: Hidden by default, Desktop: Always visible) */}
-        <div className="hidden md:flex w-64 border-r border-white/20 bg-black/15 flex-col h-screen">
-          <div className="p-4 md:p-6 border-b border-white/20">
-            <h3 className="text-sm md:text-base font-semibold flex items-center gap-2">
-              <History size={16} /> {t.activeSessions}
-            </h3>
-          </div>
-          
-          {/* New Session Options */}
-          <div className="p-3 md:p-4 border-b border-white/20">
-            <span className="text-xs text-gray-400 uppercase block mb-2">
-              {t.newChat}
-            </span>
-            <div className="space-y-2">
-              {subjects.map((sub) => (
-                <button
-                  key={sub}
-                  onClick={() => startNewSession(sub)}
-                  className="w-full text-left px-3 py-2 text-xs md:text-sm bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 rounded-lg flex items-center gap-2 transition-colors"
-                >
-                  <PlusCircle size={12} /> {sub}
-                </button>
-              ))}
-            </div>
-          </div>
 
-          {/* Session List */}
-          <div className="flex-1 overflow-y-auto p-3">
-            {fetchingSessions ? (
-              <p className="text-center text-xs text-gray-500 mt-4">{t.loading}</p>
-            ) : sessions.length === 0 ? (
-              <p className="text-center text-xs text-gray-500 mt-4">{t.noActiveSessions}</p>
-            ) : (
-              <div className="space-y-2">
-                {sessions.map((s) => (
-                  <button
-                    key={s.id}
-                    onClick={() => loadSession(s.id)}
-                    className={`w-full p-3 rounded-lg text-left transition-colors ${
-                      activeSessionId === s.id
-                        ? 'bg-blue-600/20 border border-blue-500/30'
-                        : 'bg-transparent hover:bg-white/5 border border-transparent'
-                    }`}
-                  >
-                    <div className="flex justify-between items-center mb-1">
-                      <span className={`text-sm font-medium ${
-                        activeSessionId === s.id ? 'text-blue-400' : 'text-white'
-                      }`}>
-                        {s.subject}
-                      </span>
-                      <span className="text-xs text-gray-500">
-                        {new Date(s.started_at).toLocaleDateString()}
-                      </span>
-                    </div>
-                    <p className="text-xs text-gray-400 truncate">
-                      {s.last_message}
-                    </p>
+        {/* Main area */}
+        <div style={{ flex: 1, display: "flex", height: "100vh", overflow: "hidden" }}>
+
+          {/* Chat History Panel */}
+          <div style={{
+            width: "260px",
+            flexShrink: 0,
+            borderRight: "1px solid var(--glass-border)",
+            background: "rgba(0,0,0,0.15)",
+            display: "flex",
+            flexDirection: "column",
+            height: "100vh",
+            overflow: "hidden"
+          }}>
+            <div style={{ padding: "1.25rem", borderBottom: "1px solid var(--glass-border)", flexShrink: 0 }}>
+              <h3 style={{ fontSize: "0.875rem", fontWeight: 600, display: "flex", alignItems: "center", gap: "0.5rem", color: "var(--text-primary)" }}>
+                <History size={16} /> {t.activeSessions}
+              </h3>
+            </div>
+
+            <div style={{ padding: "1rem", borderBottom: "1px solid var(--glass-border)", flexShrink: 0 }}>
+              <span style={{ fontSize: "0.7rem", color: "var(--text-muted)", textTransform: "uppercase", display: "block", marginBottom: "0.5rem" }}>
+                {t.newChat}
+              </span>
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
+                {subjects.map((sub) => (
+                  <button key={sub} onClick={() => startNewSession(sub)} style={{
+                    width: "100%", textAlign: "left", padding: "0.45rem 0.75rem",
+                    fontSize: "0.8rem", background: "rgba(255,255,255,0.04)",
+                    border: "1px solid var(--glass-border)", borderRadius: "8px",
+                    color: "var(--text-primary)", cursor: "pointer",
+                    display: "flex", alignItems: "center", gap: "0.4rem"
+                  }}>
+                    <PlusCircle size={12} /> {sub}
                   </button>
                 ))}
               </div>
-            )}
-          </div>
-        </div>
+            </div>
 
-        {/* Chat Interface Panel */}
-        <div className="flex-1 flex flex-col h-screen">
-          {/* Top Navbar */}
-          <div className="h-16 md:h-18 border-b border-white/20 px-4 md:px-8 flex items-center justify-between bg-black/20">
-            <div className="flex items-center gap-2 min-w-0">
-              {selectedSubject ? (
-                <>
-                  <MessageSquare size={18} className="text-blue-400 flex-shrink-0" />
-                  <h1 className="text-sm md:text-lg font-bold truncate">
-                    {selectedSubject} {t.tutorTitleSuffix} {user.grade})
-                  </h1>
-                </>
+            <div style={{ flex: 1, overflowY: "auto", padding: "0.75rem" }}>
+              {fetchingSessions ? (
+                <p style={{ textAlign: "center", fontSize: "0.75rem", color: "var(--text-muted)", marginTop: "1rem" }}>{t.loading}</p>
+              ) : sessions.length === 0 ? (
+                <p style={{ textAlign: "center", fontSize: "0.75rem", color: "var(--text-muted)", marginTop: "1rem" }}>{t.noActiveSessions}</p>
               ) : (
-                <span className="text-gray-400 text-sm">{t.selectSession}</span>
-              )}
-            </div>
-
-            <div className="hidden sm:flex text-xs bg-teal-500/10 text-teal-400 px-3 py-1.5 rounded-full font-medium border border-teal-500/20">
-              {t.curriculumBanner}
-            </div>
-          </div>
-
-          {/* Messages Area */}
-          <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-4 md:space-y-6">
-            {!activeSessionId ? (
-              <div className="h-full flex flex-col items-center justify-center text-center px-4">
-                <Bot size={32} className="md:w-12 md:h-12 text-gray-500 mb-4" />
-                <h3 className="text-lg md:text-xl font-semibold mb-2">{t.noActiveSessionHeader}</h3>
-                <p className="text-sm md:text-base text-gray-400 max-w-md">{t.noActiveSessionDesc}</p>
-                
-                {/* Mobile: Show subject selection */}
-                <div className="md:hidden mt-6 w-full max-w-sm space-y-2">
-                  <p className="text-xs text-gray-500 uppercase mb-3">{t.newChat}</p>
-                  {subjects.map((sub) => (
-                    <button
-                      key={sub}
-                      onClick={() => startNewSession(sub)}
-                      className="w-full text-left px-4 py-3 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 rounded-lg flex items-center gap-2 transition-colors"
-                    >
-                      <PlusCircle size={16} /> {sub}
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
+                  {sessions.map((s) => (
+                    <button key={s.id} onClick={() => loadSession(s.id)} style={{
+                      width: "100%", padding: "0.75rem", borderRadius: "8px", textAlign: "left",
+                      background: activeSessionId === s.id ? "rgba(14,165,233,0.12)" : "transparent",
+                      border: activeSessionId === s.id ? "1px solid rgba(14,165,233,0.3)" : "1px solid transparent",
+                      cursor: "pointer"
+                    }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.2rem" }}>
+                        <span style={{ fontSize: "0.85rem", fontWeight: 500, color: activeSessionId === s.id ? "var(--primary)" : "var(--text-primary)" }}>
+                          {s.subject}
+                        </span>
+                        <span style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>
+                          {new Date(s.started_at).toLocaleDateString()}
+                        </span>
+                      </div>
+                      <p style={{ fontSize: "0.72rem", color: "var(--text-secondary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {s.last_message}
+                      </p>
                     </button>
                   ))}
                 </div>
-              </div>
-            ) : messages.length === 0 && !fetchingMessages ? (
-              <div className="h-full flex flex-col items-center justify-center text-center px-4">
-                <MessageSquare size={24} className="md:w-8 md:h-8 text-blue-400 mb-4" />
-                <h3 className="text-lg md:text-xl font-semibold mb-2">{t.newChatHeader}</h3>
-                <p className="text-sm md:text-base text-gray-400 max-w-md">{t.newChatDesc}</p>
-              </div>
-            ) : fetchingMessages ? (
-              <div className="h-full flex items-center justify-center">
-                <div className="w-6 h-6 md:w-8 md:h-8 border-2 border-gray-600 border-t-blue-500 rounded-full animate-spin"></div>
-              </div>
-            ) : (
-              <>
-                {messages.map((msg, index) => {
-                  const isStudent = msg.sender === "student";
-                  return (
-                    <div 
-                      key={index} 
-                      className={`flex flex-col max-w-[85%] md:max-w-[70%] ${
-                        isStudent ? 'self-end' : 'self-start'
-                      }`}
-                    >
-                      <div 
-                        className={`p-3 md:p-4 rounded-2xl ${
-                          isStudent 
-                            ? 'bg-blue-600/20 border border-blue-500/30 rounded-br-sm' 
-                            : 'bg-white/5 border border-white/10 rounded-bl-sm'
-                        }`}
-                      >
-                        {/* Out of Scope Banner */}
-                        {msg.out_of_scope && (
-                          <div className="flex items-center gap-2 bg-yellow-500/10 border border-yellow-500/20 p-2 md:p-3 rounded-lg text-yellow-400 text-xs md:text-sm mb-3">
-                            <AlertTriangle size={14} className="flex-shrink-0" />
-                            <span>{t.outOfScope}</span>
-                          </div>
-                        )}
-                        
-                        {/* Message content */}
-                        {msg.sender === "tutor" ? (
-                          <TutorResponse content={msg.content} />
-                        ) : (
-                          <p className="text-sm md:text-base text-white leading-relaxed">
-                            {msg.content}
-                          </p>
-                        )}
-                      </div>
-
-                      {/* Source Citations */}
-                      {!isStudent && msg.sources && msg.sources.length > 0 && (
-                        <div className="flex flex-wrap gap-1 md:gap-2 mt-2">
-                          {msg.sources.map((src, sIdx) => {
-                            const chapterLabel = src.chapter
-                              ? src.chapter.slice(0, 40) + (src.chapter.length > 40 ? "..." : "")
-                              : src.source?.replace(/\.[^.]+$/, "");
-
-                            const pageLabel = src.page_number && src.page_number > 0
-                              ? (isAO ? `Fuula ${src.page_number}` : `p.${src.page_number}`)
-                              : null;
-
-                            const similarityPct = src.similarity > 0
-                              ? `${Math.round(src.similarity * 100)}%`
-                              : null;
-
-                            return (
-                              <div
-                                key={sIdx}
-                                className="flex items-center gap-1 text-xs bg-teal-500/10 border border-teal-500/20 px-2 py-1 rounded text-teal-400 max-w-full"
-                                title={`${src.source}${src.chapter ? ` — ${src.chunk_type}` : ""}`}
-                              >
-                                <BookOpen size={8} className="flex-shrink-0" />
-                                <span className="truncate">
-                                  {chapterLabel}
-                                  {pageLabel && <span className="text-gray-500"> · {pageLabel}</span>}
-                                  {similarityPct && <span className="text-gray-500"> · {similarityPct}</span>}
-                                </span>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-                
-                {sending && (
-                  <div className="flex items-center gap-2 self-start">
-                    <Bot size={16} className="text-blue-400" />
-                    <div className="flex gap-1">
-                      {[0, 0.2, 0.4].map((delay, i) => (
-                        <span 
-                          key={i}
-                          className="w-1.5 h-1.5 bg-gray-500 rounded-full animate-bounce"
-                          style={{ animationDelay: `${delay}s`, animationDuration: '1.4s' }}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </>
-            )}
-            <div ref={chatEndRef} />
+              )}
+            </div>
           </div>
 
-          {/* Input Form Box */}
-          {activeSessionId && (
-            <div className="p-4 md:p-6 border-t border-white/20 bg-black/10">
-              <form onSubmit={handleSendMessage} className="flex gap-3">
-                <input
-                  type="text"
-                  placeholder={t.placeholderInput}
-                  required
-                  value={inputText}
-                  onChange={(e) => setInputText(e.target.value)}
-                  disabled={sending}
-                  className="flex-1 px-4 py-3 bg-white/5 border border-white/20 rounded-2xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm md:text-base"
-                />
-                <button
-                  type="submit"
-                  disabled={sending || !inputText.trim()}
-                  className="w-11 h-11 md:w-12 md:h-12 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed rounded-full flex items-center justify-center transition-colors"
-                >
-                  <Send size={16} className="md:w-[18px] md:h-[18px]" />
-                </button>
-              </form>
+          {/* Chat Interface */}
+          <div style={{ flex: 1, display: "flex", flexDirection: "column", height: "100vh", overflow: "hidden" }}>
+            {/* Top bar */}
+            <div style={{
+              height: "64px", flexShrink: 0,
+              borderBottom: "1px solid var(--glass-border)",
+              padding: "0 1.5rem", display: "flex",
+              alignItems: "center", justifyContent: "space-between",
+              background: "rgba(0,0,0,0.2)"
+            }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", minWidth: 0 }}>
+                {selectedSubject ? (
+                  <>
+                    <MessageSquare size={18} style={{ color: "var(--primary)", flexShrink: 0 }} />
+                    <h1 style={{ fontSize: "1rem", fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {selectedSubject} {t.tutorTitleSuffix} {activeGrade})
+                    </h1>
+                  </>
+                ) : (
+                  <span style={{ color: "var(--text-secondary)", fontSize: "0.875rem" }}>{t.selectSession}</span>
+                )}
+              </div>
+              <div style={{
+                fontSize: "0.72rem", background: "rgba(20,184,166,0.1)", color: "var(--secondary)",
+                padding: "0.3rem 0.75rem", borderRadius: "20px",
+                border: "1px solid rgba(20,184,166,0.2)", whiteSpace: "nowrap", flexShrink: 0
+              }}>
+                {t.curriculumBanner}
+              </div>
             </div>
-          )}
+
+            {/* Messages */}
+            <div style={{ flex: 1, overflowY: "auto", padding: "1.5rem 2rem", display: "flex", flexDirection: "column", gap: "1rem" }}>
+              {!activeSessionId ? (
+                <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", padding: "2rem", margin: "auto" }}>
+                  <Bot size={40} style={{ color: "var(--text-muted)", marginBottom: "1rem" }} />
+                  <h3 style={{ fontSize: "1.25rem", fontWeight: 600, marginBottom: "0.5rem" }}>{t.noActiveSessionHeader}</h3>
+                  <p style={{ color: "var(--text-secondary)", maxWidth: "400px" }}>{t.noActiveSessionDesc}</p>
+                </div>
+              ) : messages.length === 0 && !fetchingMessages ? (
+                <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", padding: "2rem", margin: "auto" }}>
+                  <MessageSquare size={32} style={{ color: "var(--primary)", marginBottom: "1rem" }} />
+                  <h3 style={{ fontSize: "1.25rem", fontWeight: 600, marginBottom: "0.5rem" }}>{t.newChatHeader}</h3>
+                  <p style={{ color: "var(--text-secondary)", maxWidth: "400px" }}>{t.newChatDesc}</p>
+                </div>
+              ) : fetchingMessages ? (
+                <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", margin: "auto" }}>
+                  <div style={{ width: "32px", height: "32px", border: "2px solid var(--glass-border)", borderTopColor: "var(--primary)", borderRadius: "50%", animation: "spin 1s linear infinite" }} />
+                </div>
+              ) : (
+                <>
+                  {messages.map((msg, index) => {
+                    const isStudent = msg.sender === "student";
+                    return (
+                      <div key={index} style={{ display: "flex", flexDirection: "column", maxWidth: "70%", alignSelf: isStudent ? "flex-end" : "flex-start" }}>
+                        <div style={{
+                          padding: "0.875rem 1rem",
+                          borderRadius: isStudent ? "16px 16px 4px 16px" : "16px 16px 16px 4px",
+                          background: isStudent ? "rgba(14,165,233,0.12)" : "rgba(255,255,255,0.04)",
+                          border: isStudent ? "1px solid rgba(14,165,233,0.25)" : "1px solid var(--glass-border)"
+                        }}>
+                          {msg.out_of_scope && (
+                            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.2)", padding: "0.4rem 0.75rem", borderRadius: "8px", color: "var(--warning)", fontSize: "0.78rem", marginBottom: "0.75rem" }}>
+                              <AlertTriangle size={13} /><span>{t.outOfScope}</span>
+                            </div>
+                          )}
+                          {msg.sender === "tutor" ? (
+                            <TutorResponse content={msg.content} />
+                          ) : (
+                            <p style={{ fontSize: "0.9rem", lineHeight: 1.6 }}>{msg.content}</p>
+                          )}
+                        </div>
+                        {!isStudent && msg.sources && msg.sources.length > 0 && (
+                          <div style={{ display: "flex", flexWrap: "wrap", gap: "0.35rem", marginTop: "0.4rem" }}>
+                            {msg.sources.map((src, sIdx) => {
+                              const chapterLabel = src.chapter ? src.chapter.slice(0, 35) + (src.chapter.length > 35 ? "..." : "") : src.source?.replace(/\.[^.]+$/, "");
+                              const similarityPct = src.similarity > 0 ? ` Â· ${Math.round(src.similarity * 100)}%` : "";
+                              return (
+                                <div key={sIdx} style={{ display: "flex", alignItems: "center", gap: "0.25rem", fontSize: "0.7rem", background: "rgba(20,184,166,0.08)", border: "1px solid rgba(20,184,166,0.2)", padding: "0.2rem 0.5rem", borderRadius: "4px", color: "var(--secondary)" }}>
+                                  <BookOpen size={8} /><span>{chapterLabel}{similarityPct}</span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                  {sending && (
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", alignSelf: "flex-start" }}>
+                      <Bot size={16} style={{ color: "var(--primary)" }} />
+                      <div style={{ display: "flex", gap: "4px" }}>
+                        {[0, 0.2, 0.4].map((delay, i) => (
+                          <span key={i} style={{ width: "6px", height: "6px", background: "var(--text-muted)", borderRadius: "50%", display: "inline-block", animation: `bounce 1.4s ${delay}s infinite` }} />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+              <div ref={chatEndRef} />
+            </div>
+
+            {/* Input */}
+            {activeSessionId && (
+              <div style={{ padding: "1rem 1.5rem", borderTop: "1px solid var(--glass-border)", background: "rgba(0,0,0,0.1)", flexShrink: 0 }}>
+                <form onSubmit={handleSendMessage} style={{ display: "flex", gap: "0.75rem" }}>
+                  <input
+                    type="text"
+                    placeholder={t.placeholderInput}
+                    required
+                    value={inputText}
+                    onChange={(e) => setInputText(e.target.value)}
+                    disabled={sending}
+                    style={{
+                      flex: 1, padding: "0.75rem 1rem",
+                      background: "rgba(255,255,255,0.05)",
+                      border: "1px solid var(--glass-border)",
+                      borderRadius: "24px", color: "var(--text-primary)",
+                      fontSize: "0.9rem", outline: "none"
+                    }}
+                  />
+                  <button type="submit" disabled={sending || !inputText.trim()} style={{
+                    width: "44px", height: "44px", flexShrink: 0,
+                    background: sending || !inputText.trim() ? "rgba(255,255,255,0.08)" : "var(--primary)",
+                    border: "none", borderRadius: "50%",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    cursor: sending || !inputText.trim() ? "not-allowed" : "pointer"
+                  }}>
+                    <Send size={16} style={{ color: "#fff" }} />
+                  </button>
+                </form>
+              </div>
+            )}
+          </div>
         </div>
-      </main>
-    </div>
+
+        <style jsx>{`
+          @keyframes spin { to { transform: rotate(360deg); } }
+          @keyframes bounce { 0%, 60%, 100% { transform: translateY(0); } 30% { transform: translateY(-6px); } }
+        `}</style>
+      </div>
     </AuthGuard>
   );
 }
+        

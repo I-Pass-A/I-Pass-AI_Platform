@@ -4,6 +4,7 @@ import React from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { Mail, Shield, AlertTriangle, UserX, Clock } from "lucide-react";
+import { supabase } from "@/lib/supabase";
 
 interface AuthGuardProps {
   children: React.ReactNode;
@@ -159,7 +160,10 @@ export default function AuthGuard({ children }: AuthGuardProps) {
           </div>
           
           <button
-            onClick={() => router.push("/")}
+            onClick={async () => {
+              await supabase.auth.signOut();
+              router.push("/");
+            }}
             className="btn btn-outline"
           >
             Back to Login

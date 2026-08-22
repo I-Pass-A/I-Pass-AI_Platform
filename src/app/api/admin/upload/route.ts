@@ -4,7 +4,8 @@ import { GoogleGenAI } from "@google/genai";
 import { createClient } from "@supabase/supabase-js";
 
 export async function POST(req: NextRequest) {
-  // Move require inside POST to prevent evaluation crash (DOMMatrix is not defined) during Next.js build time
+  // Dynamic import to prevent DOMMatrix build-time crash
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const pdf = require("pdf-parse");
 
   // --- Server-side role check: only admins may upload curriculum ---
@@ -58,8 +59,9 @@ export async function POST(req: NextRequest) {
       try {
         const parsedPdf = await pdf(buffer);
         text = parsedPdf.text;
-      } catch (err: any) {
-        return NextResponse.json({ detail: `Failed to parse PDF: ${err.message}` }, { status: 400 });
+      } catch (err: unknown) {
+        const errMsg = err instanceof Error ? err.message : "Unknown error";
+        return NextResponse.json({ detail: `Failed to parse PDF: ${errMsg}` }, { status: 400 });
       }
     } else {
       text = buffer.toString("utf-8");
@@ -140,8 +142,9 @@ export async function POST(req: NextRequest) {
       chunk_count: chunks.length
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errMsg = error instanceof Error ? error.message : "An error occurred during upload";
     console.error("Upload error:", error);
-    return NextResponse.json({ detail: error.message || "An error occurred during upload" }, { status: 500 });
+    return NextResponse.json({ detail: errMsg }, { status: 500 });
   }
 }
