@@ -7,10 +7,11 @@ import { Session, User as SupabaseUser } from "@supabase/supabase-js";
 interface Profile {
   id: string;
   name: string;
-  role: string; // student, teacher, admin, director
+  role: string; // student, teacher, admin
   grade: string | null;
   grade_taught: string | null;
   language: string;
+  created_at: string;
   email_verified: boolean;
   is_active: boolean;
   is_minor: boolean;
@@ -43,7 +44,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const { data, error } = await supabase
         .from("profiles")
         .select(`
-          id, name, role, grade, grade_taught, language,
+          id, name, role, grade, grade_taught, language, created_at,
           email_verified, is_active, is_minor, 
           parental_consent_required, parental_consent_given
         `)

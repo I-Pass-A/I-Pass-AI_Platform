@@ -1,125 +1,212 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { useRouter, useSearchParams } from "next/navigation";
+import { CheckCircle, AlertCircle, Loader } from "lucide-react";
 
-export default function ConfirmPage() {
-  const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
-  const [message, setMessage] = useState("");
+function ConfirmContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
+  const [message, setMessage] = useState('');
 
   useEffect(() => {
-    const confirmEmail = async () => {
+    const handleEmailConfirmation = async () => {
       try {
-        const urlParams = new URLSearchParams(window.location.search);
-        const token = urlParams.get("token");
-        const type = urlParams.get("type");
+        const token_hash = searchParams.get('token_hash');
+        const type = searchParams.get('type');
 
-        if (!token) {
-          setStatus("error");
-          setMessage("No confirmation token found.");
+        if (!token_hash || type !== 'email') {
+          setStatus('error');
+          setMessage('Invalid confirmation link. Please try signing up again.');
           return;
         }
 
-        if (type === "email_change") {
-          // Handle email change confirmation
-          const { error } = await supabase.auth.verifyOtp({
-            token,
-            type: "email_change"
-          });
+        const { data, error } = await supabase.auth.verifyOtp({
+          token_hash,
+          type: 'email'
+        });
 
-          if (error) {
-            setStatus("error");
-            setMessage("Email change failed: " + error.message);
-          } else {
-            setStatus("success");
-            setMessage("Email successfully updated!");
-          }
-        } else {
-          // Handle signup confirmation
-          const { error } = await supabase.auth.verifyOtp({
-            token,
-            type: "signup"
-          });
-
-          if (error) {
-            setStatus("error");
-            setMessage("Email confirmation failed: " + error.message);
-          } else {
-            setStatus("success");
-            setMessage("Email successfully verified! You can now sign in.");
-          }
+        if (error) {
+          setStatus('error');
+          setMessage('Failed to confirm email. The link may have expired. Please try signing up again.');
+          return;
         }
-      } catch (error) {
-        setStatus("error");
-        setMessage("An unexpected error occurred.");
+
+        if (data.user) {
+          // Update profile to mark email as verified
+          await supabase
+            .from('profiles')
+            .update({ email_verified: true })
+            .eq('id', data.user.id);
+
+          setStatus('success');
+          setMessage('Email confirmed successfully! Redirecting to your dashboard...');
+
+          // Redirect after 3 seconds
+          setTimeout(() => {
+            router.push('/tutor');
+          }, 3000);
+        }
+      } catch (err) {
+        console.error('Email confirmation error:', err);
+        setStatus('error');
+        setMessage('An unexpected error occurred. Please try again.');
       }
     };
 
-    confirmEmail();
-  }, []);
-
-  const handleContinue = () => {
-    router.push("/");
-  };
+    handleEmailConfirmation();
+  }, [searchParams, router]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center p-4">
-      <div className="max-w-md w-full">
-        {/* Glassmorphism Card */}
-        <div className="bg-white/10 backdrop-blur-md rounded-2xl border border-white/20 shadow-2xl p-8">
-          
-          {/* Header */}
-          <div className="text-center mb-6">
-            <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
-              {status === "loading" && (
-                <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-              )}
-              {status === "success" && (
-                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-              )}
-              {status === "error" && (
-                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              )}
+    <div style={{
+      minHeight: "100vh",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: "2rem",
+      background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
+    }}>
+      <div className="glass-panel" style={{
+        maxWidth: "500px",
+        padding: "3rem 2rem",
+        textAlign: "center"
+      }}>
+        {status === 'loading' && (
+          <>
+            <div style={{
+              width: "80px",
+              height: "80px",
+              margin: "0 auto 1.5rem",
+              borderRadius: "50%",
+              background: "rgba(99,102,241,0.1)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center"
+            }}>
+              <Loader size={36} style={{ color: "var(--primary)", animation: "spin 1s linear infinite" }} />
             </div>
-            
-            <h1 className="text-2xl font-bold text-white mb-2">
-              {status === "loading" && "Confirming Email..."}
-              {status === "success" && "Email Confirmed!"}
-              {status === "error" && "Confirmation Failed"}
-            </h1>
-            
-            <p className="text-gray-300 text-sm">
-              {status === "loading" && "Please wait while we verify your email address."}
+            <h2 style={{ fontSize: "1.5rem", fontWeight: 700, marginBottom: "0.75rem" }}>
+              Confirming Your Email
+            </h2>
+            <p style={{ color: "var(--text-secondary)", fontSize: "1rem", lineHeight: 1.6 }}>
+              Please wait while we verify your email address...
+            </p>
+          </>
+        )}
+
+        {status === 'success' && (
+          <>
+            <div style={{
+              width: "80px",
+              height: "80px",
+              margin: "0 auto 1.5rem",
+              borderRadius: "50%",
+              background: "rgba(34,197,94,0.1)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center"
+            }}>
+              <CheckCircle size={36} style={{ color: "var(--success)" }} />
+            </div>
+            <h2 style={{ fontSize: "1.5rem", fontWeight: 700, marginBottom: "0.75rem" }}>
+              Email Confirmed! 🎉
+            </h2>
+            <p style={{ color: "var(--text-secondary)", fontSize: "1rem", lineHeight: 1.6 }}>
               {message}
             </p>
-          </div>
+          </>
+        )}
 
-          {/* Action Button */}
-          {status !== "loading" && (
-            <button
-              onClick={handleContinue}
-              className="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white py-3 px-4 rounded-xl font-semibold hover:from-blue-600 hover:to-purple-700 transition-all duration-200 shadow-lg hover:shadow-xl"
-            >
-              Continue to I-Pass-A
-            </button>
-          )}
-
-          {/* Additional Info */}
-          {status === "error" && (
-            <div className="mt-4 p-3 bg-red-500/20 border border-red-400/30 rounded-lg">
-              <p className="text-red-200 text-sm">
-                If you continue to have issues, please contact support or try signing up again.
-              </p>
+        {status === 'error' && (
+          <>
+            <div style={{
+              width: "80px",
+              height: "80px",
+              margin: "0 auto 1.5rem",
+              borderRadius: "50%",
+              background: "rgba(239,68,68,0.1)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center"
+            }}>
+              <AlertCircle size={36} style={{ color: "var(--danger)" }} />
             </div>
-          )}
-        </div>
+            <h2 style={{ fontSize: "1.5rem", fontWeight: 700, marginBottom: "0.75rem" }}>
+              Confirmation Failed
+            </h2>
+            <p style={{
+              color: "var(--text-secondary)",
+              fontSize: "1rem",
+              lineHeight: 1.6,
+              marginBottom: "2rem"
+            }}>
+              {message}
+            </p>
+            <button
+              onClick={() => router.push("/")}
+              className="btn btn-primary"
+            >
+              Back to Login
+            </button>
+          </>
+        )}
+
+        <style jsx>{`
+          @keyframes spin {
+            to { transform: rotate(360deg); }
+          }
+        `}</style>
       </div>
     </div>
+  );
+}
+
+function ConfirmFallback() {
+  return (
+    <div style={{
+      minHeight: "100vh",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: "2rem",
+      background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
+    }}>
+      <div className="glass-panel" style={{
+        maxWidth: "500px",
+        padding: "3rem 2rem",
+        textAlign: "center"
+      }}>
+        <div style={{
+          width: "80px",
+          height: "80px",
+          margin: "0 auto 1.5rem",
+          borderRadius: "50%",
+          background: "rgba(99,102,241,0.1)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center"
+        }}>
+          <Loader size={36} style={{ color: "var(--primary)", animation: "spin 1s linear infinite" }} />
+        </div>
+        <h2 style={{ fontSize: "1.5rem", fontWeight: 700, marginBottom: "0.75rem" }}>
+          Loading...
+        </h2>
+        <style jsx>{`
+          @keyframes spin {
+            to { transform: rotate(360deg); }
+          }
+        `}</style>
+      </div>
+    </div>
+  );
+}
+
+export default function ConfirmPage() {
+  return (
+    <Suspense fallback={<ConfirmFallback />}>
+      <ConfirmContent />
+    </Suspense>
   );
 }

@@ -1,22 +1,49 @@
-import { createClient } from "@supabase/supabase-js";
+import { createClient, SupabaseClient } from "@supabase/supabase-js";
+
+// Environment validation
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+// Debug environment variables (only in development)
+if (typeof window === 'undefined') { // Server-side only
+  console.log('🔧 Supabase Config Check:');
+  console.log('URL:', supabaseUrl ? '✅ Set' : '❌ Missing');
+  console.log('Anon Key:', supabaseAnonKey ? '✅ Set' : '❌ Missing');
+  console.log('Service Key:', supabaseServiceKey ? '✅ Set' : '❌ Missing');
+}
+
+// Client-side debug (visible in browser console)
+if (typeof window !== 'undefined') {
+  console.log('🌐 Client Supabase Config:');
+  console.log('URL:', supabaseUrl || '❌ Missing');
+  console.log('Anon Key:', supabaseAnonKey ? '✅ Set' : '❌ Missing');
+}
 
 const isRealConfigured = 
-  process.env.NEXT_PUBLIC_SUPABASE_URL && 
-  process.env.NEXT_PUBLIC_SUPABASE_URL !== "https://placeholder-project-id.supabase.co";
+  supabaseUrl && 
+  supabaseAnonKey &&
+  supabaseUrl !== "https://placeholder-project-id.supabase.co" &&
+  supabaseUrl.includes("supabase.co");
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder-project-id.supabase.co";
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "placeholder-anon-key";
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "placeholder-service-key";
-
-// Real Supabase Client with email confirmation enabled
-const realSupabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    flowType: 'pkce', // Use PKCE flow for better security
-    autoRefreshToken: true,
-    persistSession: true,
-    detectSessionInUrl: true
+// Real Supabase Client with enhanced error handling
+const realSupabase = createClient(
+  supabaseUrl || "https://placeholder-project-id.supabase.co", 
+  supabaseAnonKey || "placeholder-anon-key", 
+  {
+    auth: {
+      flowType: 'pkce',
+      autoRefreshToken: true,
+      persistSession: true,
+      detectSessionInUrl: true
+    },
+    global: {
+      headers: {
+        'X-Client-Info': 'i-pass-a@1.0.0'
+      }
+    }
   }
-});
+);
 
 // ================= LOCAL STORAGE MOCK DATABASE LAYER =================
 class MockQueryBuilder {
@@ -339,8 +366,7 @@ export const supabase = isRealConfigured
   : (mockSupabase as any);
 
 export const getSupabaseAdmin = () => {
-  if (isRealConfigured) {
-    if (!process.env.SUPABASE_SERVICE_ROLE_KEY) return realSupabase;
+  if (isRealConfigured && supabaseUrl && supabaseServiceKey) {
     return createClient(supabaseUrl, supabaseServiceKey, {
       auth: { persistSession: false, autoRefreshToken: false }
     });

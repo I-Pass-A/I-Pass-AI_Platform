@@ -209,38 +209,13 @@ export default function Sidebar() {
 
   return (
     <>
-      {/* Mobile Menu Toggle Button */}
-      <button
-        data-mobile-toggle
-        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-        className="md:hidden fixed top-4 left-4 z-50 p-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white"
-      >
-        {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
-      </button>
-
-      {/* Desktop Sidebar */}
-      <aside className="hidden md:flex fixed left-0 top-0 w-64 lg:w-72 h-full bg-black/40 backdrop-blur-md border-r border-white/20 z-40">
+      {/* Permanent Sidebar (Always visible on all screens) */}
+      <aside className="flex fixed left-0 top-0 w-64 lg:w-72 h-full bg-black/40 backdrop-blur-md border-r border-white/20 z-40">
         <SidebarContent />
       </aside>
 
-      {/* Mobile Sidebar */}
-      {isMobileMenuOpen && (
-        <>
-          {/* Backdrop */}
-          <div className="md:hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-40" />
-          
-          {/* Mobile Sidebar */}
-          <aside 
-            data-mobile-sidebar
-            className="md:hidden fixed left-0 top-0 w-80 h-full bg-black/90 backdrop-blur-md border-r border-white/20 z-50 transform transition-transform"
-          >
-            <SidebarContent />
-          </aside>
-        </>
-      )}
-
-      {/* Spacer for desktop */}
-      <div className="hidden md:block w-64 lg:w-72 flex-shrink-0" />
+      {/* Spacer to shift main content right */}
+      <div className="block w-64 lg:w-72 flex-shrink-0" />
     </>
   );
 }

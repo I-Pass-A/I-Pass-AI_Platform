@@ -97,17 +97,24 @@ export default function Home() {
     setSubmitting(true);
 
     try {
+      console.log('🔄 Starting authentication...', { isLogin, email });
+      
       if (isLogin) {
         const { error: loginErr } = await supabase.auth.signInWithPassword({
           email,
           password
         });
-        if (loginErr) throw loginErr;
+        if (loginErr) {
+          console.error('❌ Login error:', loginErr);
+          throw loginErr;
+        }
       } else {
         // Check if user is under 13 for COPPA compliance
         const isMinor = parseInt(grade) <= 8; // Grades 6-8 typically under 13-16
         
-        const { error: signUpErr } = await supabase.auth.signUp({
+        console.log('🔄 Attempting signup...', { email, grade, isMinor });
+        
+        const { error: signUpErr, data } = await supabase.auth.signUp({
           email,
           password,
           options: {
@@ -120,21 +127,43 @@ export default function Home() {
               language: parseInt(grade) <= 8 ? "Afaan Oromo" : "English",
               is_minor: isMinor,
               parental_consent_required: isMinor,
+              parental_consent_given: !isMinor, // Auto-approved if not minor
               terms_accepted: termsAccepted,
               terms_accepted_at: new Date().toISOString(),
-              email_verified: false, // Will be set to true after email confirmation
+              email_verified: false, // Will be set true after email confirmation 
               is_active: true
             }
           }
         });
-        if (signUpErr) throw signUpErr;
         
-        // Show verification message
-        setError(
-          lang === "EN" 
-            ? "✅ Account created! Please check your email and click the verification link to activate your account." 
-            : "✅ Herri kee uumameera! Email keessan ilaali fi link mirkaneessaa cuqaasi."
-        );
+        console.log('🔄 Signup response:', { data, error: signUpErr });
+        
+        if (signUpErr) {
+          console.error('❌ Signup error:', signUpErr);
+          throw signUpErr;
+        }
+        
+        // Show success message - different based on email confirmation
+        if (data.user && !data.session) {
+          // Email confirmation required
+          setError(
+            lang === "EN" 
+              ? "✅ Account created! Please check your email and click the verification link to activate your account." 
+              : "✅ Herri kee uumameera! Email keessan ilaali fi link mirkaneessaa cuqaasi."
+          );
+        } else {
+          // Direct access (no email confirmation needed)
+          setError(
+            lang === "EN" 
+              ? "✅ Account created successfully! Redirecting to your dashboard..." 
+              : "✅ Herri kee milkaa'inaan uumameera! Gara dashboard keessanitti geessaa jira..."
+          );
+          
+          // Auto-redirect to dashboard after 2 seconds
+          setTimeout(() => {
+            window.location.href = '/tutor';
+          }, 2000);
+        }
         setName("");
         setPassword("");
         setEmail("");
@@ -144,10 +173,26 @@ export default function Home() {
       
       router.push("/dashboard");
     } catch (err: any) {
-      setError(
-        err.message || 
-        (lang === "EN" ? "Authentication failed." : "Seensa eeyyamuun hin danda'amne.")
-      );
+      console.error('❌ Authentication error:', err);
+      
+      let errorMessage = err.message || "Authentication failed";
+      
+      // Provide user-friendly error messages
+      if (err.message?.includes('fetch')) {
+        errorMessage = lang === "EN" 
+          ? "Network error. Please check your connection and try again."
+          : "Dogoggora networkii. Walitti dhufeenya keessan ilaalii deebi'aa yaallaa.";
+      } else if (err.message?.includes('Invalid login credentials')) {
+        errorMessage = lang === "EN"
+          ? "Invalid email or password. Please try again."
+          : "Email ykn jecha iccitii sirrii miti. Deebi'aa yaallaa.";
+      } else if (err.message?.includes('User already registered')) {
+        errorMessage = lang === "EN"
+          ? "An account with this email already exists. Try logging in instead."
+          : "Herri email kanaan duraan jira. Seenuu yaallaa.";
+      }
+      
+      setError(errorMessage);
     } finally {
       setSubmitting(false);
     }

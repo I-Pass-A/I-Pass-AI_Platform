@@ -22,13 +22,7 @@ export async function GET(req: NextRequest) {
         role,
         grade,
         language,
-        email_verified,
-        is_active,
-        last_login_at,
-        login_count,
-        created_at,
-        deactivated_at,
-        deactivated_by
+        created_at
       `)
       .order("created_at", { ascending: false })
       .range(offset, offset + limit - 1);
@@ -40,10 +34,6 @@ export async function GET(req: NextRequest) {
     
     if (grade && grade !== "all") {
       query = query.eq("grade", grade);
-    }
-    
-    if (active && active !== "all") {
-      query = query.eq("is_active", active === "true");
     }
     
     const { data: users, error } = await query;
@@ -62,9 +52,6 @@ export async function GET(req: NextRequest) {
     }
     if (grade && grade !== "all") {
       countQuery = countQuery.eq("grade", grade);
-    }
-    if (active && active !== "all") {
-      countQuery = countQuery.eq("is_active", active === "true");
     }
     
     const { count, error: countError } = await countQuery;
@@ -107,31 +94,6 @@ export async function PATCH(req: NextRequest) {
     let result;
     
     switch (action) {
-      case "deactivate":
-        result = await supabase
-          .from("profiles")
-          .update({
-            is_active: false,
-            deactivated_at: new Date().toISOString()
-          })
-          .eq("id", userId)
-          .select()
-          .single();
-        break;
-        
-      case "reactivate":
-        result = await supabase
-          .from("profiles")
-          .update({
-            is_active: true,
-            deactivated_at: null,
-            deactivated_by: null
-          })
-          .eq("id", userId)
-          .select()
-          .single();
-        break;
-        
       case "update":
         result = await supabase
           .from("profiles")

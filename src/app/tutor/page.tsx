@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/context/AuthContext";
 import Sidebar from "@/components/Sidebar";
 import AuthGuard from "@/components/AuthGuard";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import TutorResponse from "@/components/TutorResponse";
 import {
@@ -34,9 +34,11 @@ interface SessionInfo {
   last_message: string;
 }
 
-export default function TutorPage() {
+function TutorPageContent() {
   const { user, loading } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const subjectParam = searchParams.get("subject");
   
   const chatEndRef = useRef<HTMLDivElement>(null);
   const [sessions, setSessions] = useState<SessionInfo[]>([]);
@@ -55,6 +57,30 @@ export default function TutorPage() {
       router.push("/");
     }
   }, [user, loading, router]);
+
+  // Load session or start new one from query param
+  useEffect(() => {
+    if (!loading && user && !fetchingSessions && subjectParam) {
+      // Clear the query parameter so it doesn't trigger again on subsequent renders
+      const currentUrl = window.location.pathname;
+      router.replace(currentUrl);
+
+      // Check if session for this subject already exists
+      const existing = sessions.find(s => s.subject.toLowerCase() === subjectParam.toLowerCase());
+      if (existing) {
+        loadSession(existing.id);
+      } else {
+        startNewSession(subjectParam);
+      }
+    }
+  }, [loading, user, fetchingSessions, subjectParam, sessions]);
+
+  // Load most recent session by default if none is active
+  useEffect(() => {
+    if (sessions.length > 0 && activeSessionId === null && !subjectParam) {
+      loadSession(sessions[0].id);
+    }
+  }, [sessions, activeSessionId, subjectParam]);
 
   // Load user sessions when user changes
   useEffect(() => {
@@ -260,66 +286,153 @@ export default function TutorPage() {
 
   return (
     <AuthGuard>
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex">
+      <div className="app-container">
         <Sidebar />
       
-      <main className="flex-1 flex flex-col md:flex-row">
+        <main className="main-content" style={{ padding: 0, height: "100vh" }}>
+          <div style={{ display: "flex", height: "100%" }}>
         
         {/* Chat History Panel (Mobile: Hidden by default, Desktop: Always visible) */}
-        <div className="hidden md:flex w-64 border-r border-white/20 bg-black/15 flex-col h-screen">
-          <div className="p-4 md:p-6 border-b border-white/20">
-            <h3 className="text-sm md:text-base font-semibold flex items-center gap-2">
+        <div className="glass-panel" style={{
+          width: "280px",
+          background: "var(--sidebar-bg)",
+          borderRight: "1px solid var(--glass-border)",
+          display: "flex",
+          flexDirection: "column",
+          height: "100vh",
+          borderRadius: 0
+        }}>
+          <div style={{
+            padding: "1.5rem",
+            borderBottom: "1px solid var(--glass-border)"
+          }}>
+            <h3 style={{
+              fontSize: "1rem",
+              fontWeight: "600",
+              display: "flex",
+              alignItems: "center",
+              gap: "0.5rem",
+              color: "var(--text-primary)"
+            }}>
               <History size={16} /> {t.activeSessions}
             </h3>
           </div>
-          
           {/* New Session Options */}
-          <div className="p-3 md:p-4 border-b border-white/20">
-            <span className="text-xs text-gray-400 uppercase block mb-2">
+          <div style={{
+            padding: "1rem",
+            borderBottom: "1px solid var(--glass-border)"
+          }}>
+            <span style={{
+              fontSize: "0.75rem",
+              color: "var(--text-secondary)",
+              textTransform: "uppercase",
+              display: "block",
+              marginBottom: "0.75rem"
+            }}>
               {t.newChat}
             </span>
-            <div className="space-y-2">
+            <div style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: "0.5rem",
+              maxHeight: "180px",
+              overflowY: "auto",
+              paddingRight: "0.25rem"
+            }}>
               {subjects.map((sub) => (
                 <button
                   key={sub}
                   onClick={() => startNewSession(sub)}
-                  className="w-full text-left px-3 py-2 text-xs md:text-sm bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 rounded-lg flex items-center gap-2 transition-colors"
+                  className="glass-panel glass-panel-hover"
+                  style={{
+                    width: "100%",
+                    textAlign: "left",
+                    padding: "0.75rem 1rem",
+                    fontSize: "0.875rem",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.5rem",
+                    cursor: "pointer",
+                    border: "1px solid var(--glass-border)",
+                    background: "var(--glass-bg)",
+                    color: "var(--text-primary)"
+                  }}
                 >
-                  <PlusCircle size={12} /> {sub}
+                  <PlusCircle size={14} style={{ color: "var(--primary)" }} /> {sub}
                 </button>
               ))}
             </div>
           </div>
 
           {/* Session List */}
-          <div className="flex-1 overflow-y-auto p-3">
+          <div style={{
+            flex: 1,
+            overflowY: "auto",
+            padding: "1rem"
+          }}>
             {fetchingSessions ? (
-              <p className="text-center text-xs text-gray-500 mt-4">{t.loading}</p>
+              <p style={{
+                textAlign: "center",
+                fontSize: "0.875rem",
+                color: "var(--text-secondary)",
+                marginTop: "2rem"
+              }}>{t.loading}</p>
             ) : sessions.length === 0 ? (
-              <p className="text-center text-xs text-gray-500 mt-4">{t.noActiveSessions}</p>
+              <p style={{
+                textAlign: "center",
+                fontSize: "0.875rem",
+                color: "var(--text-secondary)",
+                marginTop: "2rem"
+              }}>{t.noActiveSessions}</p>
             ) : (
-              <div className="space-y-2">
+              <div style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: "0.75rem"
+              }}>
                 {sessions.map((s) => (
                   <button
                     key={s.id}
                     onClick={() => loadSession(s.id)}
-                    className={`w-full p-3 rounded-lg text-left transition-colors ${
-                      activeSessionId === s.id
-                        ? 'bg-blue-600/20 border border-blue-500/30'
-                        : 'bg-transparent hover:bg-white/5 border border-transparent'
-                    }`}
+                    className={`glass-panel ${activeSessionId === s.id ? "" : "glass-panel-hover"}`}
+                    style={{
+                      width: "100%",
+                      padding: "1rem",
+                      textAlign: "left",
+                      cursor: "pointer",
+                      background: activeSessionId === s.id ? "var(--glass-active)" : "var(--glass-bg)",
+                      border: activeSessionId === s.id 
+                        ? "1px solid var(--primary)" 
+                        : "1px solid var(--glass-border)"
+                    }}
                   >
-                    <div className="flex justify-between items-center mb-1">
-                      <span className={`text-sm font-medium ${
-                        activeSessionId === s.id ? 'text-blue-400' : 'text-white'
-                      }`}>
+                    <div style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      marginBottom: "0.5rem"
+                    }}>
+                      <span style={{
+                        fontSize: "0.875rem",
+                        fontWeight: "600",
+                        color: activeSessionId === s.id ? "var(--primary)" : "var(--text-primary)"
+                      }}>
                         {s.subject}
                       </span>
-                      <span className="text-xs text-gray-500">
+                      <span style={{
+                        fontSize: "0.75rem",
+                        color: "var(--text-muted)"
+                      }}>
                         {new Date(s.started_at).toLocaleDateString()}
                       </span>
                     </div>
-                    <p className="text-xs text-gray-400 truncate">
+                    <p style={{
+                      fontSize: "0.75rem",
+                      color: "var(--text-secondary)",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap"
+                    }}>
                       {s.last_message}
                     </p>
                   </button>
@@ -330,58 +443,171 @@ export default function TutorPage() {
         </div>
 
         {/* Chat Interface Panel */}
-        <div className="flex-1 flex flex-col h-screen">
+        <div style={{
+          flex: 1,
+          display: "flex",
+          flexDirection: "column"
+        }}>
           {/* Top Navbar */}
-          <div className="h-16 md:h-18 border-b border-white/20 px-4 md:px-8 flex items-center justify-between bg-black/20">
-            <div className="flex items-center gap-2 min-w-0">
+          <div style={{
+            height: "4rem",
+            borderBottom: "1px solid var(--glass-border)",
+            padding: "0 2rem",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            background: "var(--glass-bg)",
+            backdropFilter: "blur(16px)"
+          }}>
+            <div style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "0.75rem",
+              minWidth: 0
+            }}>
               {selectedSubject ? (
                 <>
-                  <MessageSquare size={18} className="text-blue-400 flex-shrink-0" />
-                  <h1 className="text-sm md:text-lg font-bold truncate">
+                  <MessageSquare size={20} style={{ color: "var(--primary)", flexShrink: 0 }} />
+                  <h1 style={{
+                    fontSize: "1.125rem",
+                    fontWeight: "700",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                    color: "var(--text-primary)"
+                  }}>
                     {selectedSubject} {t.tutorTitleSuffix} {user.grade})
                   </h1>
                 </>
               ) : (
-                <span className="text-gray-400 text-sm">{t.selectSession}</span>
+                <span style={{
+                  color: "var(--text-secondary)",
+                  fontSize: "0.875rem"
+                }}>{t.selectSession}</span>
               )}
             </div>
 
-            <div className="hidden sm:flex text-xs bg-teal-500/10 text-teal-400 px-3 py-1.5 rounded-full font-medium border border-teal-500/20">
+            <div style={{
+              fontSize: "0.75rem",
+              background: "rgba(20, 184, 166, 0.1)",
+              color: "var(--secondary)",
+              padding: "0.375rem 0.75rem",
+              borderRadius: "9999px",
+              fontWeight: "500",
+              border: "1px solid rgba(20, 184, 166, 0.2)"
+            }}>
               {t.curriculumBanner}
             </div>
           </div>
 
           {/* Messages Area */}
-          <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-4 md:space-y-6">
+          <div style={{
+            flex: 1,
+            overflowY: "auto",
+            padding: "2rem",
+            display: "flex",
+            flexDirection: "column",
+            gap: "1.5rem"
+          }}>
             {!activeSessionId ? (
-              <div className="h-full flex flex-col items-center justify-center text-center px-4">
-                <Bot size={32} className="md:w-12 md:h-12 text-gray-500 mb-4" />
-                <h3 className="text-lg md:text-xl font-semibold mb-2">{t.noActiveSessionHeader}</h3>
-                <p className="text-sm md:text-base text-gray-400 max-w-md">{t.noActiveSessionDesc}</p>
+              <div style={{
+                height: "100%",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                textAlign: "center",
+                padding: "1rem"
+              }}>
+                <Bot size={48} style={{ color: "var(--text-muted)", marginBottom: "1rem" }} />
+                <h3 style={{
+                  fontSize: "1.25rem",
+                  fontWeight: "600",
+                  marginBottom: "0.5rem",
+                  color: "var(--text-primary)"
+                }}>{t.noActiveSessionHeader}</h3>
+                <p style={{
+                  fontSize: "1rem",
+                  color: "var(--text-secondary)",
+                  maxWidth: "28rem"
+                }}>{t.noActiveSessionDesc}</p>
                 
                 {/* Mobile: Show subject selection */}
-                <div className="md:hidden mt-6 w-full max-w-sm space-y-2">
-                  <p className="text-xs text-gray-500 uppercase mb-3">{t.newChat}</p>
+                <div 
+                  className="md:hidden"
+                  style={{
+                    marginTop: "1.5rem",
+                    width: "100%",
+                    maxWidth: "24rem",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "0.5rem"
+                  }}
+                >
+                  <p style={{
+                    fontSize: "0.75rem",
+                    color: "var(--text-muted)",
+                    textTransform: "uppercase",
+                    marginBottom: "0.75rem"
+                  }}>{t.newChat}</p>
                   {subjects.map((sub) => (
                     <button
                       key={sub}
                       onClick={() => startNewSession(sub)}
-                      className="w-full text-left px-4 py-3 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 rounded-lg flex items-center gap-2 transition-colors"
+                      className="glass-panel glass-panel-hover"
+                      style={{
+                        width: "100%",
+                        textAlign: "left",
+                        padding: "1rem 1.25rem",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "0.5rem",
+                        cursor: "pointer"
+                      }}
                     >
-                      <PlusCircle size={16} /> {sub}
+                      <PlusCircle size={16} style={{ color: "var(--primary)" }} /> {sub}
                     </button>
                   ))}
                 </div>
               </div>
             ) : messages.length === 0 && !fetchingMessages ? (
-              <div className="h-full flex flex-col items-center justify-center text-center px-4">
-                <MessageSquare size={24} className="md:w-8 md:h-8 text-blue-400 mb-4" />
-                <h3 className="text-lg md:text-xl font-semibold mb-2">{t.newChatHeader}</h3>
-                <p className="text-sm md:text-base text-gray-400 max-w-md">{t.newChatDesc}</p>
+              <div style={{
+                height: "100%",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                textAlign: "center",
+                padding: "1rem"
+              }}>
+                <MessageSquare size={32} style={{ color: "var(--primary)", marginBottom: "1rem" }} />
+                <h3 style={{
+                  fontSize: "1.25rem",
+                  fontWeight: "600",
+                  marginBottom: "0.5rem",
+                  color: "var(--text-primary)"
+                }}>{t.newChatHeader}</h3>
+                <p style={{
+                  fontSize: "1rem",
+                  color: "var(--text-secondary)",
+                  maxWidth: "28rem"
+                }}>{t.newChatDesc}</p>
               </div>
             ) : fetchingMessages ? (
-              <div className="h-full flex items-center justify-center">
-                <div className="w-6 h-6 md:w-8 md:h-8 border-2 border-gray-600 border-t-blue-500 rounded-full animate-spin"></div>
+              <div style={{
+                height: "100%",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center"
+              }}>
+                <div style={{
+                  width: "2rem",
+                  height: "2rem",
+                  border: "3px solid var(--glass-border)",
+                  borderTopColor: "var(--primary)",
+                  borderRadius: "50%",
+                  animation: "spin 1s linear infinite"
+                }}></div>
               </div>
             ) : (
               <>
@@ -390,21 +616,42 @@ export default function TutorPage() {
                   return (
                     <div 
                       key={index} 
-                      className={`flex flex-col max-w-[85%] md:max-w-[70%] ${
-                        isStudent ? 'self-end' : 'self-start'
-                      }`}
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        maxWidth: "70%",
+                        alignSelf: isStudent ? "flex-end" : "flex-start"
+                      }}
                     >
                       <div 
-                        className={`p-3 md:p-4 rounded-2xl ${
-                          isStudent 
-                            ? 'bg-blue-600/20 border border-blue-500/30 rounded-br-sm' 
-                            : 'bg-white/5 border border-white/10 rounded-bl-sm'
-                        }`}
+                        className="glass-panel"
+                        style={{
+                          padding: "1rem 1.25rem",
+                          background: isStudent 
+                            ? "rgba(14, 165, 233, 0.1)" 
+                            : "var(--glass-bg)",
+                          border: isStudent
+                            ? "1px solid rgba(14, 165, 233, 0.3)"
+                            : "1px solid var(--glass-border)",
+                          borderBottomRightRadius: isStudent ? "0.25rem" : "1rem",
+                          borderBottomLeftRadius: isStudent ? "1rem" : "0.25rem"
+                        }}
                       >
                         {/* Out of Scope Banner */}
                         {msg.out_of_scope && (
-                          <div className="flex items-center gap-2 bg-yellow-500/10 border border-yellow-500/20 p-2 md:p-3 rounded-lg text-yellow-400 text-xs md:text-sm mb-3">
-                            <AlertTriangle size={14} className="flex-shrink-0" />
+                          <div style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "0.5rem",
+                            background: "rgba(245, 158, 11, 0.1)",
+                            border: "1px solid rgba(245, 158, 11, 0.2)",
+                            padding: "0.75rem",
+                            borderRadius: "0.5rem",
+                            color: "var(--warning)",
+                            fontSize: "0.875rem",
+                            marginBottom: "0.75rem"
+                          }}>
+                            <AlertTriangle size={14} style={{ flexShrink: 0 }} />
                             <span>{t.outOfScope}</span>
                           </div>
                         )}
@@ -413,7 +660,11 @@ export default function TutorPage() {
                         {msg.sender === "tutor" ? (
                           <TutorResponse content={msg.content} />
                         ) : (
-                          <p className="text-sm md:text-base text-white leading-relaxed">
+                          <p style={{
+                            fontSize: "1rem",
+                            color: "var(--text-primary)",
+                            lineHeight: "1.6"
+                          }}>
                             {msg.content}
                           </p>
                         )}
@@ -421,7 +672,12 @@ export default function TutorPage() {
 
                       {/* Source Citations */}
                       {!isStudent && msg.sources && msg.sources.length > 0 && (
-                        <div className="flex flex-wrap gap-1 md:gap-2 mt-2">
+                        <div style={{
+                          display: "flex",
+                          flexWrap: "wrap",
+                          gap: "0.5rem",
+                          marginTop: "0.75rem"
+                        }}>
                           {msg.sources.map((src, sIdx) => {
                             const chapterLabel = src.chapter
                               ? src.chapter.slice(0, 40) + (src.chapter.length > 40 ? "..." : "")
@@ -438,14 +694,25 @@ export default function TutorPage() {
                             return (
                               <div
                                 key={sIdx}
-                                className="flex items-center gap-1 text-xs bg-teal-500/10 border border-teal-500/20 px-2 py-1 rounded text-teal-400 max-w-full"
+                                style={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: "0.25rem",
+                                  fontSize: "0.75rem",
+                                  background: "rgba(20, 184, 166, 0.1)",
+                                  border: "1px solid rgba(20, 184, 166, 0.2)",
+                                  padding: "0.25rem 0.5rem",
+                                  borderRadius: "0.25rem",
+                                  color: "var(--secondary)",
+                                  maxWidth: "100%"
+                                }}
                                 title={`${src.source}${src.chapter ? ` — ${src.chunk_type}` : ""}`}
                               >
-                                <BookOpen size={8} className="flex-shrink-0" />
-                                <span className="truncate">
+                                <BookOpen size={8} style={{ flexShrink: 0 }} />
+                                <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                                   {chapterLabel}
-                                  {pageLabel && <span className="text-gray-500"> · {pageLabel}</span>}
-                                  {similarityPct && <span className="text-gray-500"> · {similarityPct}</span>}
+                                  {pageLabel && <span style={{ color: "var(--text-muted)" }}> · {pageLabel}</span>}
+                                  {similarityPct && <span style={{ color: "var(--text-muted)" }}> · {similarityPct}</span>}
                                 </span>
                               </div>
                             );
@@ -457,14 +724,25 @@ export default function TutorPage() {
                 })}
                 
                 {sending && (
-                  <div className="flex items-center gap-2 self-start">
-                    <Bot size={16} className="text-blue-400" />
-                    <div className="flex gap-1">
+                  <div style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.5rem",
+                    alignSelf: "flex-start"
+                  }}>
+                    <Bot size={16} style={{ color: "var(--primary)" }} />
+                    <div style={{ display: "flex", gap: "0.25rem" }}>
                       {[0, 0.2, 0.4].map((delay, i) => (
                         <span 
                           key={i}
-                          className="w-1.5 h-1.5 bg-gray-500 rounded-full animate-bounce"
-                          style={{ animationDelay: `${delay}s`, animationDuration: '1.4s' }}
+                          style={{
+                            width: "0.375rem",
+                            height: "0.375rem",
+                            background: "var(--text-muted)",
+                            borderRadius: "50%",
+                            animation: `bounce 1.4s infinite`,
+                            animationDelay: `${delay}s`
+                          }}
                         />
                       ))}
                     </div>
@@ -477,8 +755,13 @@ export default function TutorPage() {
 
           {/* Input Form Box */}
           {activeSessionId && (
-            <div className="p-4 md:p-6 border-t border-white/20 bg-black/10">
-              <form onSubmit={handleSendMessage} className="flex gap-3">
+            <div style={{
+              padding: "1.5rem 2rem",
+              borderTop: "1px solid var(--glass-border)",
+              background: "var(--glass-bg)",
+              backdropFilter: "blur(16px)"
+            }}>
+              <form onSubmit={handleSendMessage} style={{ display: "flex", gap: "0.75rem" }}>
                 <input
                   type="text"
                   placeholder={t.placeholderInput}
@@ -486,21 +769,64 @@ export default function TutorPage() {
                   value={inputText}
                   onChange={(e) => setInputText(e.target.value)}
                   disabled={sending}
-                  className="flex-1 px-4 py-3 bg-white/5 border border-white/20 rounded-2xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm md:text-base"
+                  className="form-input"
+                  style={{
+                    flex: 1,
+                    padding: "0.75rem 1rem",
+                    borderRadius: "1.5rem",
+                    fontSize: "1rem"
+                  }}
                 />
                 <button
                   type="submit"
                   disabled={sending || !inputText.trim()}
-                  className="w-11 h-11 md:w-12 md:h-12 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed rounded-full flex items-center justify-center transition-colors"
+                  className="btn btn-primary"
+                  style={{
+                    width: "3rem",
+                    height: "3rem",
+                    borderRadius: "50%",
+                    padding: 0,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center"
+                  }}
                 >
-                  <Send size={16} className="md:w-[18px] md:h-[18px]" />
+                  <Send size={16} />
                 </button>
               </form>
             </div>
           )}
         </div>
+      </div>
       </main>
     </div>
     </AuthGuard>
+  );
+}
+
+export default function TutorPage() {
+  return (
+    <React.Suspense fallback={
+      <div style={{
+        height: "100vh",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        flexDirection: "column",
+        gap: "1rem",
+        background: "var(--bg-gradient)"
+      }}>
+        <div style={{
+          width: "50px",
+          height: "50px",
+          border: "3px solid var(--glass-border)",
+          borderTopColor: "var(--primary)",
+          borderRadius: "50%",
+          animation: "spin 1s linear infinite"
+        }}></div>
+      </div>
+    }>
+      <TutorPageContent />
+    </React.Suspense>
   );
 }

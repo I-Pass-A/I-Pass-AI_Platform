@@ -7,11 +7,11 @@ export async function GET(req: NextRequest) {
     
     // Basic analytics for now - can be expanded later
     const { data: usersData } = await supabase
-      .from("users")
-      .select("role, created_at, last_active_at, email_verified");
+      .from("profiles")
+      .select("role, created_at");
 
     const { data: chunksData } = await supabase
-      .from("chunks")
+      .from("curriculum_chunks")
       .select("subject, grade, created_at");
 
     const totalUsers = usersData?.length || 0;
@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
         total: totalUsers,
         students: usersData?.filter((u: any) => u.role === "student").length || 0,
         teachers: usersData?.filter((u: any) => u.role === "teacher").length || 0,
-        directors: usersData?.filter((u: any) => u.role === "director").length || 0,
+        admins: usersData?.filter((u: any) => u.role === "admin").length || 0,
       },
       content: {
         total: totalContent,

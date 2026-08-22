@@ -390,7 +390,7 @@ export default function DashboardPage() {
               </h2>
               <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem" }}>
                 {subjects.map((subj) => (
-                  <Link key={subj} href={`/tutor`} style={{ textDecoration: "none" }}>
+                  <Link key={subj} href={`/tutor?subject=${encodeURIComponent(subj)}`} style={{ textDecoration: "none" }}>
                     <div className="glass-panel glass-panel-hover" style={{ padding: "0.75rem 1rem", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer" }}>
                       <span style={{ fontSize: "0.88rem", fontWeight: 500 }}>{subj}</span>
                       <ChevronRight size={14} style={{ color: "var(--text-muted)" }} />
