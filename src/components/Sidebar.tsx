@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { useAuth } from "@/context/AuthContext";
 import {
   MessageSquare,
@@ -13,8 +13,6 @@ import {
   BookOpen,
   History,
   Eye,
-  Menu,
-  X,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -22,200 +20,252 @@ import { usePathname } from "next/navigation";
 export default function Sidebar() {
   const { user, logout, updateUserLanguage, updateUserGrade } = useAuth();
   const pathname = usePathname();
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-
-  // Close mobile menu when pathname changes
-  useEffect(() => {
-    setIsMobileMenuOpen(false);
-  }, [pathname]);
-
-  // Close mobile menu when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as HTMLElement;
-      if (isMobileMenuOpen && !target.closest('[data-mobile-sidebar]') && !target.closest('[data-mobile-toggle]')) {
-        setIsMobileMenuOpen(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [isMobileMenuOpen]);
 
   if (!user) return null;
 
-  // Handler for when grade changes
   const handleGradeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const selectedGrade = e.target.value;
     updateUserGrade(selectedGrade);
-    
-    // Automatically determine language based on grade
     const gradeNum = parseInt(selectedGrade);
     if (!isNaN(gradeNum)) {
-      if (gradeNum >= 1 && gradeNum <= 8) {
-        updateUserLanguage("Afaan Oromo");
-      } else {
-        updateUserLanguage("English");
-      }
+      updateUserLanguage(gradeNum <= 8 ? "Afaan Oromo" : "English");
     }
   };
 
   const isAO = user.language === "Afaan Oromo";
 
   const navItems = [
-    {
-      name: isAO ? "Fuula Jalqabaa" : "Dashboard",
-      path: "/dashboard",
-      icon: LayoutDashboard,
-      roles: ["student", "teacher", "admin", "director"]
-    },
-    {
-      name: isAO ? "Barsiisaa AI" : "AI Tutor",
-      path: "/tutor",
-      icon: MessageSquare,
-      roles: ["student", "teacher", "admin"]
-    },
-    {
-      name: isAO ? "Qophii Qormaataa" : "Exam Centre",
-      path: "/exams",
-      icon: Award,
-      roles: ["student", "teacher", "admin"]
-    },
-    {
-      name: isAO ? "Bu'aa Qormaataa" : "My Results",
-      path: "/results",
-      icon: History,
-      roles: ["student"]
-    },
-    {
-      name: isAO ? "Kuusaa Barnootaa" : "Curriculum",
-      path: "/admin",
-      icon: BookOpen,
-      roles: ["teacher"]
-    },
-    {
-      name: isAO ? "Bulchiinsa" : "Admin Panel",
-      path: "/admin",
-      icon: Shield,
-      roles: ["admin"]
-    },
-    {
-      name: isAO ? "To'annoo Guutuu" : "Director View",
-      path: "/director",
-      icon: Eye,
-      roles: ["director"]
-    },
+    { name: isAO ? "Fuula Jalqabaa" : "Dashboard", path: "/dashboard", icon: LayoutDashboard, roles: ["student", "teacher", "admin", "director"] },
+    { name: isAO ? "Barsiisaa AI" : "AI Tutor",   path: "/tutor",     icon: MessageSquare,  roles: ["student", "teacher", "admin"] },
+    { name: isAO ? "Qophii Qormaataa" : "Exam Centre", path: "/exams", icon: Award,          roles: ["student", "teacher", "admin"] },
+    { name: isAO ? "Bu'aa Qormaataa" : "My Results",   path: "/results", icon: History,       roles: ["student"] },
+    { name: isAO ? "Kuusaa Barnootaa" : "Curriculum",  path: "/admin",  icon: BookOpen,       roles: ["teacher"] },
+    { name: isAO ? "Bulchiinsa" : "Admin Panel",       path: "/admin",  icon: Shield,         roles: ["admin"] },
+    { name: isAO ? "To'annoo Guutuu" : "Director View",path: "/director",icon: Eye,           roles: ["director"] },
   ];
 
-  const SidebarContent = () => (
-    <div className="flex flex-col h-full">
-      {/* Brand Header */}
-      <div className="p-4 md:p-6 lg:p-8 border-b border-white/20 flex flex-col items-center gap-3 text-center">
-        <img 
-          src="/logo.png" 
-          alt="I-Pass-A Logo" 
-          className="w-16 h-16 md:w-20 md:h-20 lg:w-22 lg:h-22 rounded-2xl object-cover" 
-        />
-        <div className="flex flex-col items-center">
-          <h2 className="text-xl md:text-2xl font-bold text-gradient-primary">
-            I-Pass-A
-          </h2>
-          <span className="text-xs text-gray-400 uppercase tracking-wider">
-            AI Tutor & Exam Prep
-          </span>
-        </div>
-      </div>
+  const initials = user.name.split(" ").map((n: string) => n[0]).join("").toUpperCase();
 
-      {/* Grade & Language Control Panel */}
-      <div className="p-4 md:p-6 border-b border-white/20 space-y-4">
-        <div>
-          <label className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2">
-            <GraduationCap size={16} /> {user.language === "Afaan Oromo" ? "Kutaa" : "Grade"}
-          </label>
-          <select 
-            value={user.grade || "9"} 
-            onChange={handleGradeChange}
-            className="w-full px-3 py-2 bg-black/40 border border-white/20 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            {["6", "8", "12"].map((g) => (
-              <option key={g} value={g}>{user.language === "Afaan Oromo" ? `Kutaa ${g}` : `Grade ${g}`}</option>
-            ))}
-          </select>
-        </div>
-
-        <div className="flex items-center gap-2 text-xs text-gray-400 bg-white/5 p-3 rounded-lg border border-white/10">
-          <Globe size={14} className="text-blue-400" />
-          <span>{user.language === "Afaan Oromo" ? "Afaan" : "Language"}: <strong className="text-white">{user.language}</strong></span>
-        </div>
-      </div>
-
-      {/* Navigation Links */}
-      <nav className="flex-1 p-4 md:p-6 space-y-2">
-        {navItems
-          .filter(item => item.roles.includes(user.role))
-          .map((item) => {
-            const Icon = item.icon;
-            const isActive = pathname.startsWith(item.path);
-                
-            return (
-              <Link 
-                key={item.path + item.name} 
-                href={item.path}
-                className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all text-sm md:text-base ${
-                  isActive 
-                    ? 'bg-blue-600/20 text-white border-l-4 border-blue-500' 
-                    : 'text-gray-300 hover:bg-white/5 hover:text-white'
-                }`}
-              >
-                <Icon size={18} className={isActive ? "text-blue-400" : ""} />
-                {item.name}
-              </Link>
-            );
-          })}
-      </nav>
-
-      {/* User Footer Profile */}
-      <div className="p-4 md:p-6 border-t border-white/20 space-y-3">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-sm font-bold text-blue-400">
-            {user.name.split(" ").map(n => n[0]).join("").toUpperCase()}
-          </div>
-          <div className="flex-1 min-w-0">
-            <h4 className="text-sm font-medium text-white truncate">
-              {user.name}
-            </h4>
-            <span className="text-xs text-gray-400 capitalize">
-              {user.role === "student"
-                ? (isAO ? "Barataa" : "Student")
-                : user.role === "teacher"
-                  ? (isAO ? "Barsiisaa" : "Teacher")
-                  : user.role === "director"
-                    ? (isAO ? "Hogganaa" : "Director")
-                    : (isAO ? "Bulchaa" : "Administrator")}
-            </span>
-          </div>
-        </div>
-        
-        <button
-          onClick={logout}
-          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 hover:border-red-500/50 rounded-lg text-red-400 text-sm font-medium transition-colors"
-        >
-          <LogOut size={15} />
-          {user.language === "Afaan Oromo" ? "Ba'i" : "Log Out"}
-        </button>
-      </div>
-    </div>
-  );
+  const roleLabel = user.role === "student"
+    ? (isAO ? "Barataa" : "Student")
+    : user.role === "teacher"
+      ? (isAO ? "Barsiisaa" : "Teacher")
+      : user.role === "director"
+        ? (isAO ? "Hogganaa" : "Director")
+        : (isAO ? "Bulchaa" : "Administrator");
 
   return (
     <>
-      {/* Permanent Sidebar (Always visible on all screens) */}
-      <aside className="flex fixed left-0 top-0 w-64 lg:w-72 h-full bg-black/40 backdrop-blur-md border-r border-white/20 z-40">
-        <SidebarContent />
+      <aside style={{
+        position: "fixed",
+        left: 0,
+        top: 0,
+        width: "260px",
+        height: "100vh",
+        background: "var(--sidebar-bg)",
+        backdropFilter: "blur(20px)",
+        WebkitBackdropFilter: "blur(20px)",
+        borderRight: "1px solid var(--glass-border)",
+        display: "flex",
+        flexDirection: "column",
+        zIndex: 40,
+        overflowY: "auto"
+      }}>
+
+        {/* ── Brand ── */}
+        <div style={{
+          padding: "1.75rem 1.5rem 1.25rem",
+          borderBottom: "1px solid var(--glass-border)",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: "0.75rem",
+          textAlign: "center"
+        }}>
+          <img
+            src="/logo.png"
+            alt="I-Pass-A"
+            style={{ width: "72px", height: "72px", borderRadius: "16px", objectFit: "cover" }}
+          />
+          <div>
+            <h2 style={{
+              fontSize: "1.5rem",
+              fontWeight: 800,
+              background: "linear-gradient(135deg, #38bdf8 0%, #10b981 100%)",
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent"
+            }}>I-Pass-A</h2>
+            <span style={{ fontSize: "0.7rem", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+              AI Tutor & Exam Prep
+            </span>
+          </div>
+        </div>
+
+        {/* ── Grade & Language ── */}
+        <div style={{
+          padding: "1.25rem 1.5rem",
+          borderBottom: "1px solid var(--glass-border)",
+          display: "flex",
+          flexDirection: "column",
+          gap: "0.875rem"
+        }}>
+          <div>
+            <label style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "0.4rem",
+              fontSize: "0.8rem",
+              fontWeight: 500,
+              color: "var(--text-secondary)",
+              marginBottom: "0.5rem"
+            }}>
+              <GraduationCap size={14} />
+              {isAO ? "Kutaa" : "Grade"}
+            </label>
+            <select
+              value={user.grade || "12"}
+              onChange={handleGradeChange}
+              className="form-select"
+              style={{ width: "100%", fontSize: "0.875rem" }}
+            >
+              {["6", "8", "12"].map((g) => (
+                <option key={g} value={g}>
+                  {isAO ? `Kutaa ${g}` : `Grade ${g}`}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "0.5rem",
+            fontSize: "0.75rem",
+            color: "var(--text-secondary)",
+            background: "var(--glass-bg)",
+            padding: "0.6rem 0.875rem",
+            borderRadius: "8px",
+            border: "1px solid var(--glass-border)"
+          }}>
+            <Globe size={13} style={{ color: "var(--primary)", flexShrink: 0 }} />
+            <span>{isAO ? "Afaan" : "Language"}: <strong style={{ color: "var(--text-primary)" }}>{user.language}</strong></span>
+          </div>
+        </div>
+
+        {/* ── Navigation ── */}
+        <nav style={{
+          flex: 1,
+          padding: "1.25rem 1rem",
+          display: "flex",
+          flexDirection: "column",
+          gap: "0.375rem"
+        }}>
+          {navItems
+            .filter(item => item.roles.includes(user.role))
+            .map((item) => {
+              const Icon = item.icon;
+              const isActive = pathname.startsWith(item.path);
+              return (
+                <Link
+                  key={item.path + item.name}
+                  href={item.path}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.75rem",
+                    padding: "0.75rem 1rem",
+                    borderRadius: "10px",
+                    fontSize: "0.9rem",
+                    fontWeight: isActive ? 600 : 400,
+                    color: isActive ? "var(--text-primary)" : "var(--text-secondary)",
+                    background: isActive ? "rgba(14, 165, 233, 0.12)" : "transparent",
+                    borderLeft: isActive ? "3px solid var(--primary)" : "3px solid transparent",
+                    textDecoration: "none",
+                    transition: "all 0.15s ease"
+                  }}
+                >
+                  <Icon size={18} style={{ color: isActive ? "var(--primary)" : "var(--text-muted)", flexShrink: 0 }} />
+                  {item.name}
+                </Link>
+              );
+            })}
+        </nav>
+
+        {/* ── User Profile Footer ── */}
+        <div style={{
+          padding: "1.25rem 1.5rem",
+          borderTop: "1px solid var(--glass-border)",
+          display: "flex",
+          flexDirection: "column",
+          gap: "0.875rem"
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+            <div style={{
+              width: "38px",
+              height: "38px",
+              borderRadius: "50%",
+              background: "rgba(14, 165, 233, 0.15)",
+              border: "1px solid rgba(14, 165, 233, 0.3)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: "0.8rem",
+              fontWeight: 700,
+              color: "var(--primary)",
+              flexShrink: 0
+            }}>
+              {initials}
+            </div>
+            <div style={{ minWidth: 0 }}>
+              <p style={{
+                fontSize: "0.875rem",
+                fontWeight: 600,
+                color: "var(--text-primary)",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap"
+              }}>{user.name}</p>
+              <p style={{ fontSize: "0.75rem", color: "var(--text-secondary)", textTransform: "capitalize" }}>
+                {roleLabel}
+              </p>
+            </div>
+          </div>
+
+          <button
+            onClick={logout}
+            style={{
+              width: "100%",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "0.5rem",
+              padding: "0.625rem 1rem",
+              background: "rgba(239, 68, 68, 0.08)",
+              border: "1px solid rgba(239, 68, 68, 0.25)",
+              borderRadius: "8px",
+              color: "var(--danger)",
+              fontSize: "0.875rem",
+              fontWeight: 500,
+              cursor: "pointer",
+              transition: "all 0.15s ease"
+            }}
+            onMouseEnter={e => {
+              (e.currentTarget as HTMLButtonElement).style.background = "rgba(239, 68, 68, 0.15)";
+              (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(239, 68, 68, 0.45)";
+            }}
+            onMouseLeave={e => {
+              (e.currentTarget as HTMLButtonElement).style.background = "rgba(239, 68, 68, 0.08)";
+              (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(239, 68, 68, 0.25)";
+            }}
+          >
+            <LogOut size={15} />
+            {isAO ? "Ba'i" : "Log Out"}
+          </button>
+        </div>
       </aside>
 
-      {/* Spacer to shift main content right */}
-      <div className="block w-64 lg:w-72 flex-shrink-0" />
+      {/* Spacer to push main content right */}
+      <div style={{ width: "260px", flexShrink: 0 }} />
     </>
   );
 }

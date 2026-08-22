@@ -23,6 +23,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ detail: "Tutor session not found" }, { status: 404 });
     }
 
+    // Debug: confirm env vars are present server-side
+    console.log("🔑 OPENROUTER_API_KEY loaded:", !!process.env.OPENROUTER_API_KEY);
+    console.log("🌐 SUPABASE_SERVICE_ROLE_KEY loaded:", !!process.env.SUPABASE_SERVICE_ROLE_KEY);
+
     const subject = sessionData.subject;
     const gradeNum = parseInt(grade?.replace("Grade", "").trim() || "12");
     
