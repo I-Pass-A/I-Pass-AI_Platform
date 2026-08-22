@@ -21,8 +21,6 @@ export async function POST(req: NextRequest) {
       userId = user?.id ?? null;
     }
 
-    const supabaseAdmin = getSupabaseAdmin();
-
     // Resolve grade band
     const gradeNum = parseInt(grade?.replace("Grade", "").trim() || "12");
     const gradeBand = gradeNum <= 6 ? "6" : gradeNum <= 8 ? "8" : "12";
