@@ -171,7 +171,7 @@ h1, h2, h3, h4, h5, h6 {
 .btn-primary:hover {
   transform: translateY(-1px);
   box-shadow: 0 6px 20px 0 rgba(14, 165, 233, 0.4);
-  background: linear-gradient(135deg, var(--primary-hover) 0%, var(--primary) 100__);
+  background: linear-gradient(135deg, var(--primary-hover) 0%, var(--primary) 100%);
 }
 
 .btn-secondary {
@@ -218,3 +218,4 @@ h1, h2, h3, h4, h5, h6 {
 .animate-fade-in {
   animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
+

@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import Sidebar from "@/components/Sidebar";
+import AuthGuard from "@/components/AuthGuard";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import {
@@ -143,6 +144,7 @@ export default function ResultsPage() {
     : null;
 
   return (
+    <AuthGuard>
     <div className="app-container">
       <Sidebar />
 
@@ -369,5 +371,6 @@ export default function ResultsPage() {
 
       </main>
     </div>
+    </AuthGuard>
   );
 }
