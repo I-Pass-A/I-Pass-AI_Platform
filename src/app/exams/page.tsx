@@ -128,10 +128,36 @@ function ExamTaker({
 
       {/* Score summary for self-practice */}
       {assessment && (
-        <div style={{ background: "rgba(20,184,166,0.08)", border: "1px solid rgba(20,184,166,0.2)", padding: "1.5rem", borderRadius: "var(--radius-md)", marginBottom: "2rem", textAlign: "center" }}>
-          <Award size={36} style={{ color: "var(--secondary)", marginBottom: "0.5rem" }} />
-          <h3 style={{ fontSize: "1.4rem", fontWeight: 700 }}>{isAO ? "Qormaanni Xumurameera!" : "Exam Completed!"}</h3>
-          <p style={{ fontSize: "1.1rem" }}>{isAO ? "Qabxii:" : "Score:"} <strong style={{ color: "var(--secondary)", fontSize: "1.6rem" }}>{assessment.score.toFixed(1)}%</strong></p>
+        <div style={{ background: "rgba(20,184,166,0.08)", border: "1px solid rgba(20,184,166,0.2)", padding: "1.5rem", borderRadius: "var(--radius-md)", marginBottom: "2rem" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "1rem", flexWrap: "wrap" }}>
+            <Award size={36} style={{ color: "var(--secondary)", flexShrink: 0 }} />
+            <div style={{ flex: 1 }}>
+              <h3 style={{ fontSize: "1.2rem", fontWeight: 700 }}>{isAO ? "Qormaanni Xumurameera!" : "Exam Completed!"}</h3>
+              <p style={{ fontSize: "1.5rem", fontWeight: 800, color: assessment.score >= 80 ? "var(--success)" : assessment.score >= 50 ? "var(--warning)" : "var(--danger)", marginTop: "0.25rem" }}>
+                {assessment.score.toFixed(1)}%
+              </p>
+            </div>
+            <div style={{ display: "flex", gap: "1.5rem", flexShrink: 0 }}>
+              <div style={{ textAlign: "center" }}>
+                <div style={{ fontSize: "1.5rem", fontWeight: 800, color: "var(--success)" }}>
+                  {assessment.results.filter(r => r.is_correct).length}
+                </div>
+                <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)" }}>{isAO ? "Sirrii" : "Correct"}</div>
+              </div>
+              <div style={{ textAlign: "center" }}>
+                <div style={{ fontSize: "1.5rem", fontWeight: 800, color: "var(--danger)" }}>
+                  {assessment.results.filter(r => !r.is_correct).length}
+                </div>
+                <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)" }}>{isAO ? "Dogoggora" : "Wrong"}</div>
+              </div>
+              <div style={{ textAlign: "center" }}>
+                <div style={{ fontSize: "1.5rem", fontWeight: 800, color: "var(--text-secondary)" }}>
+                  {assessment.results.length}
+                </div>
+                <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)" }}>{isAO ? "Waliigala" : "Total"}</div>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
@@ -171,23 +197,65 @@ function ExamTaker({
                   <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
                     {options.map((opt, oIdx) => {
                       const isChecked = answers[q.id] === opt;
+                      const isCorrectOpt = qResult?.correct_answer === opt;
+                      const isWrongSelected = isChecked && qResult && !qResult.is_correct;
+
+                      let bg = "rgba(0,0,0,0.1)";
+                      let border = "var(--glass-border)";
+                      let labelColor = "var(--text-primary)";
+
+                      if (qResult) {
+                        if (isCorrectOpt) { bg = "rgba(34,197,94,0.1)"; border = "rgba(34,197,94,0.5)"; labelColor = "var(--success)"; }
+                        else if (isWrongSelected) { bg = "rgba(239,68,68,0.1)"; border = "rgba(239,68,68,0.5)"; labelColor = "var(--danger)"; }
+                      } else if (isChecked) {
+                        bg = "rgba(14,165,233,0.05)"; border = "var(--primary)";
+                      }
+
                       return (
-                        <label key={oIdx} style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.75rem 1rem", borderRadius: "8px", border: "1px solid", borderColor: isChecked ? "var(--primary)" : "var(--glass-border)", background: isChecked ? "rgba(14,165,233,0.05)" : "rgba(0,0,0,0.1)", cursor: disabled ? "default" : "pointer" }}>
+                        <label key={oIdx} style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.75rem 1rem", borderRadius: "8px", border: `1px solid ${border}`, background: bg, cursor: disabled ? "default" : "pointer", color: labelColor }}>
                           <input type="radio" name={`q-${q.id}`} value={opt} checked={isChecked} onChange={() => !disabled && setAnswers((p) => ({ ...p, [q.id]: opt }))} disabled={disabled} />
                           <span>{opt}</span>
+                          {qResult && isCorrectOpt && <CheckCircle size={14} style={{ marginLeft: "auto", color: "var(--success)", flexShrink: 0 }} />}
+                          {qResult && isWrongSelected && <XCircle size={14} style={{ marginLeft: "auto", color: "var(--danger)", flexShrink: 0 }} />}
                         </label>
                       );
                     })}
                   </div>
                 ) : (
-                  <input type="text" className="form-input" placeholder={q.type === "definition" ? (isAO ? "Hiika barreessi..." : "Write definition...") : (isAO ? "Deebii gabaabaa..." : "Short answer...")} value={answers[q.id] || ""} onChange={(e) => !disabled && setAnswers((p) => ({ ...p, [q.id]: e.target.value }))} disabled={disabled} style={{ width: "100%" }} />
+                  <input type="text" className="form-input" placeholder={q.type === "definition" ? (isAO ? "Hiika barreessi..." : "Write definition...") : (isAO ? "Deebii gabaabaa..." : "Short answer...")} value={answers[q.id] || ""} onChange={(e) => !disabled && setAnswers((p) => ({ ...p, [q.id]: e.target.value }))} disabled={disabled} style={{ width: "100%", borderColor: qResult ? (qResult.is_correct ? "rgba(34,197,94,0.5)" : "rgba(239,68,68,0.5)") : undefined }} />
                 )}
               </div>
-              {assessment && qResult && (
-                <div style={{ marginTop: "1rem", padding: "0.75rem 1rem", background: "rgba(255,255,255,0.02)", border: "1px dashed var(--glass-border)", borderRadius: "8px", fontSize: "0.85rem" }}>
-                  <div><strong>{isAO ? "Deebii Sirrii" : "Correct Answer"}:</strong> <span style={{ color: "var(--secondary)" }}>{qResult.correct_answer}</span></div>
-                  {qResult.student_answer && <div style={{ marginTop: "0.25rem" }}><strong>{isAO ? "Deebii Kee" : "Your Answer"}:</strong> {qResult.student_answer}</div>}
-                  <div style={{ marginTop: "0.25rem", color: "var(--text-secondary)" }}><strong>{isAO ? "Ibsa" : "Explanation"}:</strong> {qResult.explanation}</div>
+
+              {/* Result feedback box */}
+              {qResult && (
+                <div style={{ marginTop: "1rem", borderRadius: "10px", overflow: "hidden", border: `1px solid ${qResult.is_correct ? "rgba(34,197,94,0.25)" : "rgba(239,68,68,0.25)"}` }}>
+                  {/* Header */}
+                  <div style={{ padding: "0.6rem 1rem", background: qResult.is_correct ? "rgba(34,197,94,0.1)" : "rgba(239,68,68,0.1)", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                    {qResult.is_correct
+                      ? <><CheckCircle size={15} style={{ color: "var(--success)" }} /><span style={{ color: "var(--success)", fontWeight: 700, fontSize: "0.85rem" }}>{isAO ? "Sirrii!" : "Correct!"}</span></>
+                      : <><XCircle size={15} style={{ color: "var(--danger)" }} /><span style={{ color: "var(--danger)", fontWeight: 700, fontSize: "0.85rem" }}>{isAO ? "Sirrii miti" : "Incorrect"}</span></>}
+                  </div>
+                  {/* Body */}
+                  <div style={{ padding: "0.875rem 1rem", background: "rgba(0,0,0,0.15)", display: "flex", flexDirection: "column", gap: "0.5rem", fontSize: "0.875rem" }}>
+                    {!qResult.is_correct && (
+                      <div style={{ display: "flex", gap: "0.5rem" }}>
+                        <span style={{ color: "var(--text-muted)", flexShrink: 0 }}>{isAO ? "Deebii Sirrii:" : "Correct answer:"}</span>
+                        <span style={{ color: "var(--success)", fontWeight: 600 }}>{qResult.correct_answer}</span>
+                      </div>
+                    )}
+                    {!qResult.is_correct && qResult.student_answer && (
+                      <div style={{ display: "flex", gap: "0.5rem" }}>
+                        <span style={{ color: "var(--text-muted)", flexShrink: 0 }}>{isAO ? "Deebii Kee:" : "Your answer:"}</span>
+                        <span style={{ color: "var(--danger)" }}>{qResult.student_answer}</span>
+                      </div>
+                    )}
+                    {qResult.explanation && (
+                      <div style={{ display: "flex", gap: "0.5rem", paddingTop: qResult.is_correct ? 0 : "0.25rem", borderTop: qResult.is_correct ? "none" : "1px solid rgba(255,255,255,0.06)" }}>
+                        <span style={{ color: "var(--text-muted)", flexShrink: 0 }}>💡 {isAO ? "Ibsa:" : "Why:"}</span>
+                        <span style={{ color: "var(--text-secondary)", lineHeight: 1.5 }}>{qResult.explanation}</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </div>

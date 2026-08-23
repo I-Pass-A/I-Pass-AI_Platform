@@ -253,7 +253,7 @@ function TutorPageContent() {
         body: JSON.stringify({
           session_id: activeSessionId,
           query: studentText,
-          grade: user.grade
+          grade: activeGrade
         })
       });
 
