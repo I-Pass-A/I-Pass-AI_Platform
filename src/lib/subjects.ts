@@ -67,3 +67,10 @@ export function canAccessGrade(user: { role: string; grade: string | null; grade
   if (user.role === "admin" || user.role === "director") return true;
   return getActiveGrade(user) === grade;
 }
+
+/** Returns true if the user's active grade uses Afaan Oromo (Grades 6 & 8) */
+export function isAfaanOromo(user: { role: string; grade: string | null; grade_taught: string | null } | null): boolean {
+  if (!user) return false;
+  const activeGrade = getActiveGrade(user);
+  return activeGrade === "6" || activeGrade === "8";
+}

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
@@ -7,7 +7,7 @@ import AuthGuard from "@/components/AuthGuard";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
-import { getSubjectsForGrade } from "@/lib/subjects";
+import { getSubjectsForGrade, isAfaanOromo } from "@/lib/subjects";
 import {
   MessageSquare, Award, Clock, CheckCircle,
   BookOpen, TrendingUp, AlertCircle, ChevronRight,
@@ -148,7 +148,7 @@ export default function DashboardPage() {
 
   if (loading || !user) return null;
 
-  const isAO = user.language === "Afaan Oromo";
+  const isAO = isAfaanOromo(user);
   const activeGrade = user.role === "teacher"
     ? (user.grade_taught ?? user.grade)
     : user.grade;

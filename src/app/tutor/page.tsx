@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/context/AuthContext";
@@ -16,7 +16,7 @@ import {
   PlusCircle, 
   History 
 } from "lucide-react";
-import { getSubjectsForGrade } from "@/lib/subjects";
+import { getSubjectsForGrade, isAfaanOromo } from "@/lib/subjects";
 
 interface Message {
   id?: number;
@@ -99,7 +99,7 @@ function TutorPageContent() {
   // Determine subject list: teachers use their grade_taught, students use their grade
   const activeGrade = user.role === "teacher" ? (user.grade_taught ?? user.grade) : user.grade;
   const subjects = getSubjectsForGrade(activeGrade);
-  const isAO = user.language === "Afaan Oromo";
+  const isAO = isAfaanOromo(user);
 
   // Dynamic Translations (No mixed bilingual labels)
   const t = {

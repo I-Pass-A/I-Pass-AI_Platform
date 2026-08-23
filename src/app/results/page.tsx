@@ -1,10 +1,11 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import Sidebar from "@/components/Sidebar";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { isAfaanOromo } from "@/lib/subjects";
 import {
   Award, CheckCircle, XCircle, Clock,
   MessageSquare, TrendingUp, Star, ChevronDown, ChevronUp,
@@ -113,7 +114,7 @@ export default function ResultsPage() {
 
   if (loading || !user) return null;
 
-  const isAO = user.language === "Afaan Oromo";
+  const isAO = isAfaanOromo(user);
 
   const scoreColor = (s: number) =>
     s >= 80 ? "var(--success)" : s >= 50 ? "var(--warning)" : "var(--danger)";

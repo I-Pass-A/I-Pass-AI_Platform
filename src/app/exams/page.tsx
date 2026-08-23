@@ -11,7 +11,7 @@ import {
   Download, Play, Plus, ListFilter, Send, Clock,
   ClipboardList, BookOpen, Users, Star, AlertCircle,
 } from "lucide-react";
-import { getSubjectsForGrade } from "@/lib/subjects";
+import { getSubjectsForGrade, isAfaanOromo } from "@/lib/subjects";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -289,7 +289,7 @@ export default function ExamsPage() {
   if (loading || !user) return null;
 
   const subjects = getSubjectsForGrade(activeGrade);
-  const isAO = user.language === "Afaan Oromo";
+  const isAO = isAfaanOromo(user);
 
   const authHeaders = (extra?: Record<string, string>) => ({
     "Content-Type": "application/json",
