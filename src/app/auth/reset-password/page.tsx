@@ -15,14 +15,32 @@ export default function ResetPasswordPage() {
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
 
-  // Check we actually have an active recovery session
-  // (if someone navigates here directly without a reset link, redirect them away)
+  // Handle the recovery token from the reset email URL
   useEffect(() => {
-    (supabase.auth.getSession() as Promise<any>).then((result) => {
-      if (!result?.data?.session) {
+    const handleRecoveryToken = async () => {
+      const params = new URLSearchParams(window.location.search);
+      const token_hash = params.get("token_hash");
+      const type = params.get("type");
+
+      if (token_hash && type === "recovery") {
+        // Verify the OTP token from the email link
+        const { error } = await supabase.auth.verifyOtp({ token_hash, type: "recovery" });
+        if (error) {
+          setError("This reset link has expired or already been used. Please request a new one.");
+        }
+        // Clean up URL
+        window.history.replaceState({}, "", "/auth/reset-password");
+        return;
+      }
+
+      // No token in URL — check if there's an existing recovery session
+      const { data: { session } } = await supabase.auth.getSession() as any;
+      if (!session) {
         router.replace("/");
       }
-    });
+    };
+
+    handleRecoveryToken();
   }, [router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
