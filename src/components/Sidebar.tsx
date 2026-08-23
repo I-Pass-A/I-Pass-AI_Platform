@@ -122,18 +122,37 @@ export default function Sidebar() {
               <GraduationCap size={14} />
               {isAO ? "Kutaa" : "Grade"}
             </label>
-            <select
-              value={user.grade || "12"}
-              onChange={handleGradeChange}
-              className="form-select"
-              style={{ width: "100%", fontSize: "0.875rem" }}
-            >
-              {["6", "8", "12"].map((g) => (
-                <option key={g} value={g}>
-                  {isAO ? `Kutaa ${g}` : `Grade ${g}`}
-                </option>
-              ))}
-            </select>
+
+            {/* Admin & Director: can switch grades freely */}
+            {(user.role === "admin" || user.role === "director") ? (
+              <select
+                value={user.grade || "12"}
+                onChange={handleGradeChange}
+                className="form-select"
+                style={{ width: "100%", fontSize: "0.875rem" }}
+              >
+                {["6", "8", "12"].map((g) => (
+                  <option key={g} value={g}>
+                    {isAO ? `Kutaa ${g}` : `Grade ${g}`}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              /* Students & Teachers: fixed grade, no dropdown */
+              <div style={{
+                padding: "0.6rem 0.875rem",
+                borderRadius: "8px",
+                border: "1px solid var(--glass-border)",
+                background: "var(--glass-bg)",
+                fontSize: "0.875rem",
+                color: "var(--text-primary)",
+                fontWeight: 600
+              }}>
+                {isAO
+                  ? `Kutaa ${user.role === "teacher" ? (user.grade_taught || "12") : (user.grade || "12")}`
+                  : `Grade ${user.role === "teacher" ? (user.grade_taught || "12") : (user.grade || "12")}`}
+              </div>
+            )}
           </div>
 
           <div style={{

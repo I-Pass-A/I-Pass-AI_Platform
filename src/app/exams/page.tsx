@@ -226,8 +226,12 @@ export default function ExamsPage() {
   const { user, loading, session } = useAuth();
   const router = useRouter();
 
-  const activeGrade = user?.role === "teacher" ? (user?.grade_taught ?? user?.grade) : user?.grade;
+  const activeGrade = user?.role === "teacher"
+    ? (user?.grade_taught ?? user?.grade)
+    : user?.grade ?? "12";
+
   const isTeacher = user?.role === "teacher" || user?.role === "admin";
+  const isAdminOrDirector = user?.role === "admin" || user?.role === "director";
 
   // Tab state
   const [tab, setTab] = useState<Tab>("my-exams");
@@ -302,12 +306,16 @@ export default function ExamsPage() {
       let query = supabase
         .from("exams")
         .select("id, subject, topic, difficulty, grade, questions, created_at, created_by")
-        .eq("grade", activeGrade ?? "12")
         .order("created_at", { ascending: false });
 
-      // Teachers/admins only see their own exams; students see all grade exams
-      if (isTeacher) {
-        query = query.eq("created_by", user.id);
+      if (isAdminOrDirector) {
+        // Admin/Director see all exams across all grades
+      } else if (isTeacher) {
+        // Teachers see only their own exams for their grade
+        query = query.eq("grade", activeGrade ?? "12").eq("created_by", user.id);
+      } else {
+        // Students see all exams for their grade only
+        query = query.eq("grade", activeGrade ?? "12");
       }
 
       const { data } = await query;

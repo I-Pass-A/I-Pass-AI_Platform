@@ -54,7 +54,16 @@ export function getLanguageForGrade(grade: string | null | undefined): string {
   return LANGUAGE_BY_GRADE[grade ?? "12"] ?? "English";
 }
 
-/** Returns the numeric grade band string (strips "Grade " prefix if present). */
-export function getGradeBand(grade: string | null | undefined): string {
-  return (grade ?? "12").replace(/grade\s*/i, "").trim();
+/** Returns the active grade for a user based on their role */
+export function getActiveGrade(user: { role: string; grade: string | null; grade_taught: string | null } | null): string {
+  if (!user) return "12";
+  if (user.role === "teacher") return user.grade_taught ?? user.grade ?? "12";
+  return user.grade ?? "12";
+}
+
+/** Returns whether a user can access a specific grade */
+export function canAccessGrade(user: { role: string; grade: string | null; grade_taught: string | null } | null, grade: string): boolean {
+  if (!user) return false;
+  if (user.role === "admin" || user.role === "director") return true;
+  return getActiveGrade(user) === grade;
 }
