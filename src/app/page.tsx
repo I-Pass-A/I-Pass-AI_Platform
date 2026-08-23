@@ -17,12 +17,14 @@ export default function Home() {
   const [lang, setLang] = useState<"EN" | "AO">("EN");
   
   // Form fields
-  const [name, setName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [schoolName, setSchoolName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState("student");
-  const [grade, setGrade] = useState("12");         // student's grade
-  const [gradeTaught, setGradeTaught] = useState("12"); // teacher's grade
+  const [grade, setGrade] = useState("12");
+  const [gradeTaught, setGradeTaught] = useState("12");
   
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -129,17 +131,20 @@ export default function Home() {
           options: {
             emailRedirectTo: `${window.location.origin}/auth/confirm`,
             data: {
-              name,
+              name: `${firstName.trim()} ${lastName.trim()}`,
+              first_name: firstName.trim(),
+              last_name: lastName.trim(),
+              school_name: schoolName.trim(),
               role: "student",
               grade,
               grade_taught: null,
               language: parseInt(grade) <= 8 ? "Afaan Oromo" : "English",
               is_minor: isMinor,
               parental_consent_required: isMinor,
-              parental_consent_given: !isMinor, // Auto-approved if not minor
+              parental_consent_given: !isMinor,
               terms_accepted: termsAccepted,
               terms_accepted_at: new Date().toISOString(),
-              email_verified: false, // Will be set true after email confirmation 
+              email_verified: false,
               is_active: true
             }
           }
@@ -173,7 +178,9 @@ export default function Home() {
             window.location.href = '/tutor';
           }, 2000);
         }
-        setName("");
+        setFirstName("");
+        setLastName("");
+        setSchoolName("");
         setPassword("");
         setEmail("");
         setSubmitting(false);
@@ -486,21 +493,56 @@ export default function Home() {
 
               <form onSubmit={handleSubmit}>
                 {!isLogin && (
-                  <div className="form-group">
-                    <label className="form-label">{t.nameLabel}</label>
-                    <div style={{ position: "relative" }}>
-                      <UserIcon size={16} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)" }} />
-                      <input
-                        type="text"
-                        className="form-input"
-                        placeholder="John Doe"
-                        required
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        style={{ width: "100%", paddingLeft: "2.5rem" }}
-                      />
+                  <>
+                    <div style={{ display: "flex", gap: "0.75rem" }}>
+                      <div className="form-group" style={{ flex: 1 }}>
+                        <label className="form-label">{lang === "EN" ? "First Name" : "Maqaa"}</label>
+                        <div style={{ position: "relative" }}>
+                          <UserIcon size={16} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)" }} />
+                          <input
+                            type="text"
+                            className="form-input"
+                            placeholder={lang === "EN" ? "John" : "Tolaa"}
+                            required
+                            value={firstName}
+                            onChange={(e) => setFirstName(e.target.value)}
+                            style={{ width: "100%", paddingLeft: "2.5rem" }}
+                          />
+                        </div>
+                      </div>
+                      <div className="form-group" style={{ flex: 1 }}>
+                        <label className="form-label">{lang === "EN" ? "Last Name" : "Godaansaa"}</label>
+                        <div style={{ position: "relative" }}>
+                          <UserIcon size={16} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)" }} />
+                          <input
+                            type="text"
+                            className="form-input"
+                            placeholder={lang === "EN" ? "Doe" : "Girma"}
+                            required
+                            value={lastName}
+                            onChange={(e) => setLastName(e.target.value)}
+                            style={{ width: "100%", paddingLeft: "2.5rem" }}
+                          />
+                        </div>
+                      </div>
                     </div>
-                  </div>
+
+                    <div className="form-group">
+                      <label className="form-label">{lang === "EN" ? "School Name" : "Maqaa Mana Barumsaa"}</label>
+                      <div style={{ position: "relative" }}>
+                        <BookOpen size={16} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)" }} />
+                        <input
+                          type="text"
+                          className="form-input"
+                          placeholder={lang === "EN" ? "e.g. Adama Secondary School" : "fkn. Mana Barumsaa Adaamaa"}
+                          required
+                          value={schoolName}
+                          onChange={(e) => setSchoolName(e.target.value)}
+                          style={{ width: "100%", paddingLeft: "2.5rem" }}
+                        />
+                      </div>
+                    </div>
+                  </>
                 )}
 
                 <div className="form-group">
