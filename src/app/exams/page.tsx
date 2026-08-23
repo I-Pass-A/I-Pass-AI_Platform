@@ -679,14 +679,14 @@ export default function ExamsPage() {
                       <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>{ex.question_count} {isAO ? "Gaaffilee" : "Questions"}</span>
                       <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
                         <button onClick={() => setTakingExam(ex as any)} className="btn btn-primary" style={{ padding: "0.35rem 0.75rem", fontSize: "0.8rem" }}>
-                          <Play size={12} /> <span className="hidden sm:inline">{isAO ? "Fudhadhu" : "Take"}</span>
+                          <Play size={12} /> <span>{isAO ? "Fudhadhu" : "Take"}</span>
                         </button>
                         {isTeacher && (
                           <button
                             onClick={() => { setPublishingFor({ exam_id: ex.id, subject: ex.subject, topic: ex.topic }); setPubTitle(`${ex.subject} — ${ex.topic}`); setPubGrade(activeGrade ?? "12"); setTab("my-assignments"); }}
                             className="btn btn-outline" style={{ padding: "0.35rem 0.75rem", fontSize: "0.8rem" }}
                           >
-                            <Send size={12} /> <span className="hidden sm:inline">{isAO ? "Maxxansi" : "Publish"}</span>
+                            <Send size={12} /> <span>{isAO ? "Maxxansi" : "Publish"}</span>
                           </button>
                         )}
                       </div>
@@ -793,15 +793,15 @@ export default function ExamsPage() {
               <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
                 {isTeacher && (
                   <button onClick={() => { setPublishingFor({ exam_id: generatedExam.id, subject: generatedExam.subject, topic: generatedExam.topic }); setPubTitle(`${generatedExam.subject} — ${generatedExam.topic}`); setPubGrade(activeGrade ?? "12"); setTab("my-assignments"); setGeneratedExam(null); }} className="btn btn-primary">
-                    <Send size={14} /> <span className="hidden sm:inline">{isAO ? "Barattoota Ramaddi" : "Assign to Students"}</span>
+                    <Send size={14} /> <span>{isAO ? "Barattoota Ramaddi" : "Assign to Students"}</span>
                   </button>
                 )}
                 {/* Print exam without taking it — teacher can print a physical copy */}
                 <button onClick={() => window.print()} className="btn btn-outline">
-                  <Download size={14} /> <span className="hidden sm:inline">{isAO ? "Maxxansi" : "Print"}</span>
+                  <Download size={14} /> <span>{isAO ? "Maxxansi" : "Print"}</span>
                 </button>
                 <button onClick={() => { setTakingExam(generatedExam); setGeneratedExam(null); }} className="btn btn-outline">
-                  <Play size={14} /> <span className="hidden sm:inline">{isAO ? "Amma Fudhadhu" : "Take Now"}</span>
+                  <Play size={14} /> <span>{isAO ? "Amma Fudhadhu" : "Take Now"}</span>
                 </button>
                 <button onClick={() => setGeneratedExam(null)} className="btn btn-outline">{isAO ? "Haaraa Uumi" : "Generate Another"}</button>
               </div>
@@ -872,7 +872,7 @@ export default function ExamsPage() {
                               disabled={past}
                               style={{ minWidth: "100px" }}
                             >
-                              {past ? (isAO ? "Darbeera" : "Closed") : <><Play size={14} /> <span className="hidden sm:inline">{isAO ? "Eegali" : "Start"}</span></>}
+                              {past ? (isAO ? "Darbeera" : "Closed") : <><Play size={14} /> <span>{isAO ? "Eegali" : "Start"}</span></>}
                             </button>
                           )}
                         </div>
@@ -936,7 +936,7 @@ export default function ExamsPage() {
                   <div style={{ gridColumn: "1 / -1", display: "flex", gap: "0.75rem", justifyContent: "flex-end", flexWrap: "wrap" }}>
                     <button type="button" onClick={() => setPublishingFor(null)} className="btn btn-outline">{isAO ? "Haqi" : "Cancel"}</button>
                     <button type="submit" className="btn btn-primary" disabled={publishing}>
-                      {publishing ? "..." : <><Send size={14} /> <span className="hidden sm:inline">{isAO ? "Maxxansi" : "Publish to Students"}</span></>}
+                      {publishing ? "..." : <><Send size={14} /> <span>{isAO ? "Maxxansi" : "Publish to Students"}</span></>}
                     </button>
                   </div>
                 </form>
@@ -976,7 +976,7 @@ export default function ExamsPage() {
                           <span style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>{a.exams?.subject} — {a.exams?.topic}</span>
                         </div>
                         <button onClick={() => fetchSubmissions(a)} className="btn btn-outline" style={{ fontSize: "0.82rem" }}>
-                          <Users size={13} /> <span className="hidden sm:inline">{isAO ? "Deebii Ilaali" : "View Submissions"}</span>
+                          <Users size={13} /> <span>{isAO ? "Deebii Ilaali" : "View Submissions"}</span>
                         </button>
                       </div>
                     );

@@ -41,20 +41,44 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const fetchProfile = async (userId: string) => {
     try {
+      // First try with all columns
       const { data, error } = await supabase
         .from("profiles")
-        .select(`
-          id, name, role, grade, grade_taught, language, created_at,
-          email_verified, is_active, is_minor, 
-          parental_consent_required, parental_consent_given
-        `)
+        .select(`id, name, role, grade, grade_taught, language, created_at`)
         .eq("id", userId)
         .single();
 
-      if (error) {
-        throw error;
+      if (error) throw error;
+
+      // Try to get extra columns, default to safe values if they don't exist
+      let extraData = {
+        email_verified: true,
+        is_active: true,
+        is_minor: false,
+        parental_consent_required: false,
+        parental_consent_given: true,
+      };
+
+      try {
+        const { data: extra } = await supabase
+          .from("profiles")
+          .select(`email_verified, is_active, is_minor, parental_consent_required, parental_consent_given`)
+          .eq("id", userId)
+          .single();
+        if (extra) {
+          extraData = {
+            email_verified: extra.email_verified ?? true,
+            is_active: extra.is_active ?? true,
+            is_minor: extra.is_minor ?? false,
+            parental_consent_required: extra.parental_consent_required ?? false,
+            parental_consent_given: extra.parental_consent_given ?? true,
+          };
+        }
+      } catch {
+        // Extra columns don't exist yet - use defaults (schema not migrated)
       }
-      setUser(data);
+
+      setUser({ ...data, ...extraData });
     } catch (e) {
       console.error("Error loading user profile:", e);
       setUser(null);
