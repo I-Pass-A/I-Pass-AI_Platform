@@ -47,10 +47,16 @@ async function callOpenRouter(messages: any[], model: string, providerName: stri
 // Provider configuration (ordered by speed and cost)
 const AI_PROVIDERS: AIProvider[] = [
   {
-    name: "OpenRouter-Llama-Fast",
-    model: "meta-llama/llama-3.1-8b-instruct:free",
-    call: (messages, jsonMode) => callOpenRouter(messages, "meta-llama/llama-3.1-8b-instruct:free", "OpenRouter-Llama-Fast", jsonMode),
-    timeout: 25000
+    name: "Gemma-4-31B-Free",
+    model: "google/gemma-4-31b-it:free",
+    call: (messages, jsonMode) => callOpenRouter(messages, "google/gemma-4-31b-it:free", "Gemma-4-31B-Free", jsonMode),
+    timeout: 30000
+  },
+  {
+    name: "Gemma-4-26B-Free",
+    model: "google/gemma-4-26b-a4b-it:free",
+    call: (messages, jsonMode) => callOpenRouter(messages, "google/gemma-4-26b-a4b-it:free", "Gemma-4-26B-Free", jsonMode),
+    timeout: 30000
   },
   {
     name: "OpenRouter-GPT-4o-Mini",
