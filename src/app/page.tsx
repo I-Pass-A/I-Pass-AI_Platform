@@ -36,6 +36,15 @@ export default function Home() {
   const [forgotError, setForgotError] = useState("");
 
   useEffect(() => {
+    // Handle Supabase PKCE code redirect landing on home page
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get("code");
+    if (code) {
+      // This is a password reset redirect - forward to reset page
+      router.replace(`/auth/reset-password?code=${code}`);
+      return;
+    }
+
     if (!loading && user) {
       router.push(user.role === "director" ? "/director" : "/dashboard");
     }

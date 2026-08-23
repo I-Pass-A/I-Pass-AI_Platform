@@ -20,20 +20,30 @@ export default function ResetPasswordPage() {
     const handleRecoveryToken = async () => {
       const params = new URLSearchParams(window.location.search);
       const token_hash = params.get("token_hash");
+      const code = params.get("code");
       const type = params.get("type");
 
-      if (token_hash && type === "recovery") {
-        // Verify the OTP token from the email link
-        const { error } = await supabase.auth.verifyOtp({ token_hash, type: "recovery" });
+      // PKCE flow: ?code=... (Supabase sends this when using PKCE)
+      if (code) {
+        const { error } = await supabase.auth.exchangeCodeForSession(code);
         if (error) {
           setError("This reset link has expired or already been used. Please request a new one.");
         }
-        // Clean up URL
         window.history.replaceState({}, "", "/auth/reset-password");
         return;
       }
 
-      // No token in URL — check if there's an existing recovery session
+      // OTP flow: ?token_hash=...&type=recovery
+      if (token_hash && type === "recovery") {
+        const { error } = await supabase.auth.verifyOtp({ token_hash, type: "recovery" });
+        if (error) {
+          setError("This reset link has expired or already been used. Please request a new one.");
+        }
+        window.history.replaceState({}, "", "/auth/reset-password");
+        return;
+      }
+
+      // No token — check existing session
       const { data: { session } } = await supabase.auth.getSession() as any;
       if (!session) {
         router.replace("/");
