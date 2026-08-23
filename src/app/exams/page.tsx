@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/context/AuthContext";
@@ -566,36 +566,7 @@ export default function ExamsPage() {
         <Sidebar />
         <main className="main-content" style={{ display: "flex", flexDirection: "column" }}>
 
-        {/* Print styles and mobile responsive utilities */}
-        <style jsx global>{`
-          @media print {
-            body { background: white !important; color: black !important; }
-            .app-container aside, .no-print { display: none !important; }
-            .main-content { padding: 0 !important; height: auto !important; overflow: visible !important; }
-            .glass-panel { background: transparent !important; border: none !important; box-shadow: none !important; padding: 0 !important; }
-            p, span, div, h1, h2, h3, h4, h5, h6 { color: black !important; }
-          }
-          
-          /* Mobile responsive utilities */
-          .hidden { display: none; }
-          
-          @media (min-width: 640px) {
-            .sm\\:inline { display: inline; }
-          }
-          
-          .grid { display: grid; }
-          .grid-cols-1 { grid-template-columns: repeat(1, minmax(0, 1fr)); }
-          .gap-8 { gap: 2rem; }
-          
-          @media (min-width: 1024px) {
-            .lg\\:grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-          }
-          
-          /* Hide scrollbar for tab navigation */
-          .no-print::-webkit-scrollbar {
-            display: none;
-          }
-        `}</style>
+        {/* Print styles - no hidden class overrides */}
 
         {/* Page header */}
         <div className="no-print" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1.75rem" }}>
