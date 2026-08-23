@@ -69,6 +69,11 @@ EXAM SPEC:
 
 ${contextBlock ? `CURRICULUM CONTEXT:\n${contextBlock}\n` : ""}
 
+CRITICAL RULES:
+1. Every answer_key entry MUST have a non-empty explanation (1-2 sentences saying WHY the answer is correct)
+2. Explanations must be educational and reference the subject matter
+3. Never leave explanation as empty string ""
+
 OUTPUT FORMAT (raw JSON only, nothing else before or after):
 {
   "questions": [
@@ -78,10 +83,10 @@ OUTPUT FORMAT (raw JSON only, nothing else before or after):
     {"id": 4, "type": "definition", "question_text": "Define: photosynthesis"}
   ],
   "answer_key": [
-    {"id": 1, "correct_answer": "A. ...", "explanation": "..."},
-    {"id": 2, "correct_answer": "True", "explanation": "..."},
-    {"id": 3, "correct_answer": "mitochondria", "explanation": "..."},
-    {"id": 4, "correct_answer": "Photosynthesis is ...", "explanation": ""}
+    {"id": 1, "correct_answer": "A. ...", "explanation": "This is correct because [reason from curriculum]."},
+    {"id": 2, "correct_answer": "True", "explanation": "This is true because [reason from curriculum]."},
+    {"id": 3, "correct_answer": "mitochondria", "explanation": "The mitochondria is responsible for [reason]."},
+    {"id": 4, "correct_answer": "Photosynthesis is the process by which...", "explanation": "Photosynthesis converts light energy into chemical energy stored in glucose."}
   ]
 }`;
 
@@ -120,6 +125,18 @@ OUTPUT FORMAT (raw JSON only, nothing else before or after):
     if (!Array.isArray(examData.questions) || examData.questions.length === 0) {
       return NextResponse.json({ detail: "AI returned no questions. Please try again." }, { status: 503 });
     }
+
+    // Post-process: fill any empty explanations so students always see feedback
+    const answerKey = (examData.answer_key || []).map((item: any, idx: number) => {
+      const q = examData.questions.find((q: any) => q.id === item.id) || examData.questions[idx];
+      if (!item.explanation || item.explanation.trim() === "") {
+        item.explanation = language === "Afaan Oromo"
+          ? `Deebiin sirrii "${item.correct_answer}" dha. ${q?.question_text ? `Gaaffii "${q.question_text.slice(0, 60)}" irratti.' ` : ""}`
+          : `The correct answer is "${item.correct_answer}". Review your ${subject} notes on "${topic}" for more details.`;
+      }
+      return item;
+    });
+    examData.answer_key = answerKey;
 
     // 5. Save exam to DB
     const { data: savedExam, error: saveErr } = await supabaseAdmin
