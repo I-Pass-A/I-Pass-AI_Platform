@@ -1,785 +1,537 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/context/AuthContext";
 import Sidebar from "@/components/Sidebar";
 import AuthGuard from "@/components/AuthGuard";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import {
-  Upload, Trash2, Database, FileText, CheckCircle2, ShieldAlert, BookOpen, Lock,
-  Users, Activity, Settings, Shield, Eye, EyeOff, UserCheck, UserX, Search,
-  Filter, TrendingUp, Clock, AlertTriangle, MoreVertical, ChevronDown
+  Users, LayoutDashboard, BookOpen, Trash2, Search,
+  Shield, GraduationCap, MessageSquare, Award,
+  CheckCircle, XCircle, AlertCircle, RefreshCw,
+  ChevronDown, UserX, UserCheck, Mail, Clock,
 } from "lucide-react";
 
-interface ChunkInfo {
-  id: number;
-  subject: string;
-  topic: string;
-  grade: string;
-  language: string;
-  source_document: string;
-  content_preview: string;
-  version: number;
-  uploaded_by?: string;
-  created_at: string;
-}
-
-interface User {
+// ── Types ──────────────────────────────────────────────────────────────────────
+interface Profile {
   id: string;
   name: string;
   role: string;
-  grade: string;
+  grade: string | null;
+  grade_taught: string | null;
   language: string;
   email_verified: boolean;
   is_active: boolean;
-  last_login_at: string | null;
-  login_count: number;
   created_at: string;
+  email?: string;
 }
 
-interface Analytics {
+interface PlatformStats {
   totalUsers: number;
-  activeUsers: number;
-  verifiedUsers: number;
-  weeklyActiveUsers: number;
-  monthlyActiveUsers: number;
-  roleDistribution: Record<string, number>;
-  gradeDistribution: Record<string, number>;
+  students: number;
+  teachers: number;
+  directors: number;
+  admins: number;
+  totalSessions: number;
+  totalExams: number;
+  totalChunks: number;
+  gradeBreakdown: Record<string, number>;
 }
 
+type Tab = "overview" | "users" | "curriculum";
+
+// ── Admin Page ─────────────────────────────────────────────────────────────────
 export default function AdminPage() {
   const { user, session, loading } = useAuth();
   const router = useRouter();
 
-  const isAdmin = user?.role === "admin";
-  const isAO = user?.language === "Afaan Oromo";
+  const [tab, setTab] = useState<Tab>("overview");
+  const [stats, setStats] = useState<PlatformStats | null>(null);
+  const [loadingStats, setLoadingStats] = useState(false);
 
-  // Early returns for auth checks
-  if (loading || !user) return null;
-  if (user.role !== "admin" && user.role !== "teacher") return null;
-
-  // Tab state
-  const [activeTab, setActiveTab] = useState<"upload" | "users" | "analytics" | "security">("upload");
-  
-  // Migration state
-  const [migrating, setMigrating] = useState(false);
-  const [migrationResult, setMigrationResult] = useState<any>(null);
-  const [migrationError, setMigrationError] = useState("");
-  
-  // Upload form state
-  const [file, setFile] = useState<File | null>(null);
-  const [subject, setSubject] = useState("");
-  const [topic, setTopic] = useState("");
-  const [gradeBand, setGradeBand] = useState("12");
-  const [language, setLanguage] = useState("English");
-  const [uploading, setUploading] = useState(false);
-  const [uploadSuccess, setUploadSuccess] = useState("");
-  const [uploadError, setUploadError] = useState("");
-
-  // Chunks state
-  const [chunks, setChunks] = useState<ChunkInfo[]>([]);
-  const [fetchingChunks, setFetchingChunks] = useState(false);
-  
-  // User management state
-  const [users, setUsers] = useState<User[]>([]);
+  // Users state
+  const [users, setUsers] = useState<Profile[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
-  
-  // Analytics state
-  const [analytics, setAnalytics] = useState<Analytics | null>(null);
-  const [loadingAnalytics, setLoadingAnalytics] = useState(false);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<Profile | null>(null);
 
-  // Auth check
+  // Curriculum state
+  const [chunks, setChunks] = useState<any[]>([]);
+  const [loadingChunks, setLoadingChunks] = useState(false);
+  const [gradeFilter, setGradeFilter] = useState("all");
+
   useEffect(() => {
     if (!loading && (!user || user.role !== "admin")) {
       router.push("/dashboard");
     }
   }, [user, loading, router]);
 
-  // Load data based on active tab
   useEffect(() => {
     if (user?.role === "admin") {
-      if (activeTab === "upload") {
-        fetchChunks();
-      } else if (activeTab === "users") {
-        fetchUsers();
-      } else if (activeTab === "analytics") {
-        fetchAnalytics();
-      }
-      // Security tab doesn't need data loading
+      if (tab === "overview") fetchStats();
+      else if (tab === "users") fetchUsers();
+      else if (tab === "curriculum") fetchChunks();
     }
-  }, [activeTab, user]);
+  }, [tab, user]);
 
-  const fetchChunks = async () => {
-    setFetchingChunks(true);
+  // ── Data Fetching ────────────────────────────────────────────────────────────
+
+  const fetchStats = async () => {
+    setLoadingStats(true);
     try {
-      const { data, error } = await supabase
-        .from("curriculum_chunks")
-        .select("id, subject, topic, grade, language, source_document, content, version, uploaded_by, created_at")
-        .order("created_at", { ascending: false })
-        .limit(50);
+      const [profilesRes, sessionsRes, examsRes, chunksRes] = await Promise.all([
+        supabase.from("profiles").select("role, grade, grade_taught"),
+        supabase.from("tutor_sessions").select("id", { count: "exact", head: true }),
+        supabase.from("exams").select("id", { count: "exact", head: true }),
+        supabase.from("curriculum_chunks").select("id", { count: "exact", head: true }),
+      ]);
 
-      if (error) throw error;
+      const profiles = profilesRes.data || [];
+      const gradeBreakdown: Record<string, number> = {};
+      profiles.forEach((p: any) => {
+        const g = p.grade || p.grade_taught;
+        if (g) gradeBreakdown[g] = (gradeBreakdown[g] || 0) + 1;
+      });
 
-      const formatted: ChunkInfo[] = (data || []).map((c: any) => ({
-        id: c.id,
-        subject: c.subject,
-        topic: c.topic,
-        grade: c.grade,
-        language: c.language,
-        source_document: c.source_document,
-        content_preview: c.content.slice(0, 120) + "...",
-        version: c.version,
-        uploaded_by: c.uploaded_by || "System",
-        created_at: c.created_at,
-      }));
-
-      setChunks(formatted);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setFetchingChunks(false);
-    }
+      setStats({
+        totalUsers: profiles.length,
+        students: profiles.filter((p: any) => p.role === "student").length,
+        teachers: profiles.filter((p: any) => p.role === "teacher").length,
+        directors: profiles.filter((p: any) => p.role === "director").length,
+        admins: profiles.filter((p: any) => p.role === "admin").length,
+        totalSessions: sessionsRes.count || 0,
+        totalExams: examsRes.count || 0,
+        totalChunks: chunksRes.count || 0,
+        gradeBreakdown,
+      });
+    } catch (e) { console.error(e); }
+    finally { setLoadingStats(false); }
   };
 
   const fetchUsers = async () => {
     setLoadingUsers(true);
     try {
-      let query = supabase
+      let q = supabase
         .from("profiles")
-        .select(`
-          id, name, role, grade, language, 
-          email_verified, is_active, last_login_at, 
-          login_count, created_at
-        `)
+        .select("id, name, role, grade, grade_taught, language, email_verified, is_active, created_at")
         .order("created_at", { ascending: false });
-
-      if (roleFilter !== "all") {
-        query = query.eq("role", roleFilter);
-      }
-
-      const { data, error } = await query;
+      if (roleFilter !== "all") q = q.eq("role", roleFilter);
+      const { data, error } = await q;
       if (error) throw error;
-      
       setUsers(data || []);
-    } catch (error) {
-      console.error("Error fetching users:", error);
-    } finally {
-      setLoadingUsers(false);
-    }
+    } catch (e) { console.error(e); }
+    finally { setLoadingUsers(false); }
   };
 
-  const fetchAnalytics = async () => {
-    setLoadingAnalytics(true);
+  const fetchChunks = async () => {
+    setLoadingChunks(true);
     try {
-      const { data: profiles, error } = await supabase
-        .from("profiles")
-        .select("role, grade, language, email_verified, is_active, last_login_at, created_at");
-
-      if (error) throw error;
-
-      const now = new Date();
-      const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-
-      const profilesList = (profiles || []) as any[];
-      const analytics: Analytics = {
-        totalUsers: profilesList.length,
-        activeUsers: profilesList.filter((p: any) => p.is_active).length,
-        verifiedUsers: profilesList.filter((p: any) => p.email_verified).length,
-        weeklyActiveUsers: profilesList.filter((p: any) => 
-          p.last_login_at && new Date(p.last_login_at) > weekAgo
-        ).length,
-        monthlyActiveUsers: profilesList.filter((p: any) => 
-          p.last_login_at && new Date(p.last_login_at) > new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
-        ).length,
-        roleDistribution: profilesList.reduce((acc: any, p: any) => {
-          acc[p.role] = (acc[p.role] || 0) + 1;
-          return acc;
-        }, {} as Record<string, number>),
-        gradeDistribution: profilesList.reduce((acc: any, p: any) => {
-          if (p.grade) acc[p.grade] = (acc[p.grade] || 0) + 1;
-          return acc;
-        }, {} as Record<string, number>)
-      };
-
-      setAnalytics(analytics);
-    } catch (error) {
-      console.error("Error fetching analytics:", error);
-    } finally {
-      setLoadingAnalytics(false);
-    }
-  };
-
-  // Apply security migration
-  const applySecurityMigration = async () => {
-    if (!session?.access_token) {
-      setMigrationError("No valid session token");
-      return;
-    }
-    
-    setMigrating(true);
-    setMigrationError("");
-    setMigrationResult(null);
-    
-    try {
-      const response = await fetch("/api/admin/migrate", {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${session.access_token}`,
-          "Content-Type": "application/json"
-        }
-      });
-      
-      const data = await response.json();
-      
-      if (response.ok) {
-        setMigrationResult(data);
-      } else {
-        setMigrationError(data.error || "Migration failed");
-      }
-    } catch (error: any) {
-      setMigrationError(error.message || "Network error");
-    } finally {
-      setMigrating(false);
-    }
-  };
-
-  const handleUserAction = async (userId: string, action: "activate" | "deactivate") => {
-    try {
-      const { error } = await supabase
-        .from("profiles")
-        .update({ 
-          is_active: action === "activate",
-          deactivated_at: action === "deactivate" ? new Date().toISOString() : null
-        })
-        .eq("id", userId);
-
-      if (error) throw error;
-      fetchUsers(); // Refresh list
-    } catch (error) {
-      console.error("Error updating user:", error);
-    }
-  };
-
-  const handleDeleteUser = async (userId: string) => {
-    if (!confirm("Are you sure you want to permanently delete this user? This action cannot be undone.")) {
-      return;
-    }
-
-    try {
-      // First check if it's an admin
-      const user = users.find(u => u.id === userId);
-      if (user?.role === "admin") {
-        alert("Cannot delete admin users");
-        return;
-      }
-
-      const { error } = await supabase
-        .from("profiles")
-        .delete()
-        .eq("id", userId);
-
-      if (error) throw error;
-      fetchUsers(); // Refresh list
-    } catch (error) {
-      console.error("Error deleting user:", error);
-    }
-  };
-
-  const t = {
-    headerTitle: isAdmin
-      ? (isAO ? "Bulchiinsa Barnootaa" : "Curriculum Administration")
-      : (isAO ? "Kuusaa Barnootaa" : "Curriculum Library"),
-    headerDesc: isAdmin
-      ? (isAO
-          ? "PDF ykn kitaaba barumsaa ol-kaasi, gosa barnootaafi kutaadhaan mallatteessi."
-          : "Upload textbooks, tag them by grade and subject, manage the RAG vector store.")
-      : (isAO
-          ? "Kuusaa barnoota Vector DB keessa jiru ilaali."
-          : "Browse the curriculum materials loaded into the AI knowledge base."),
-    uploadHeading: isAO ? "Kitaaba Barnootaa Ol-kaasi" : "Upload Textbook",
-    labelFile: isAO ? "Faayilii PDF ykn TXT filadhu" : "Select PDF or Text File",
-    labelSubject: isAO ? "Gosa Barnootaa" : "Subject",
-    placeholderSubject: isAO ? "fkn. Saayinsii, Afaan Oromo" : "e.g. Biology, English",
-    labelTopic: isAO ? "Mata-duree / Boqonnaa" : "Topic / Unit",
-    placeholderTopic: isAO ? "fkn. Boqonnaa 2, Caasluga" : "e.g. Cell Structure, Tenses",
-    labelGrade: isAO ? "Kutaa Barnootaa" : "Grade Band",
-    optGrade6: isAO ? "Kutaa 6 (Afaan Oromoo)" : "Grade 6 (Afaan Oromo)",
-    optGrade8: isAO ? "Kutaa 8 (Afaan Oromoo)" : "Grade 8 (Afaan Oromo)",
-    optGrade12: isAO ? "Kutaa 12 (Ingiliffa)" : "Grade 12 (English)",
-    labelLanguage: isAO ? "Afaan Kuusaa (RAG)" : "Grounding Language",
-    btnSubmit: isAO ? "Vector DBtti Kuusi" : "Process & Save to Vector DB",
-    uploadingBtn: isAO ? "Ol-kaasaa jira..." : "Uploading & Chunking...",
-    successMsg: isAO
-      ? "Kitaabni barumsaa ol-kaafamee milkiin kuusameera!"
-      : "Textbook uploaded and processed successfully!",
-    errorMsg: isAO
-      ? "Faayilii ol-kaasuun hin danda'amne."
-      : "Failed to upload document. Ensure file format is valid.",
-    dbHeading: isAO ? "Haala Vector Database" : "Vector Database Status",
-    chunksCount: isAO ? "Kutaa Kuusaa" : "Chunks",
-    loadingDB: isAO ? "Haala database fiduu jira..." : "Loading database status...",
-    emptyDB: isAO
-      ? "Vector database duwwaa dha."
-      : "Vector database is empty. Upload a textbook to get started.",
-    sourceLabel: isAO ? "Madda" : "Source",
-    uploadedByLabel: isAO ? "Uploader" : "Uploaded By",
-    confirmRetract: isAO
-      ? "Faayilii kana haquu mirkaneessi?"
-      : "Retract this curriculum chunk? It removes the source from AI grounding immediately.",
-    teacherReadOnly: isAO
-      ? "Barsiisaan kitaaba barumsaa ol-kaasuu hin danda'u — kun bulchaa qofaaf."
-      : "Teachers cannot upload textbooks — that is restricted to administrators.",
-  };
-
-  const handleUploadSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!file || !subject || !topic || uploading) return;
-
-    setUploading(true);
-    setUploadSuccess("");
-    setUploadError("");
-
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("subject", subject);
-    formData.append("topic", topic);
-    formData.append("grade", gradeBand);
-    formData.append("language", language);
-    formData.append("uploaded_by", `${user.name} (Admin)`);
-
-    try {
-      const response = await fetch("/api/admin/upload", {
-        method: "POST",
-        headers: {
-          ...(session?.access_token
-            ? { Authorization: `Bearer ${session.access_token}` }
-            : {}),
-        },
-        body: formData,
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        setUploadSuccess(data.detail || t.successMsg);
-        setFile(null);
-        setSubject("");
-        setTopic("");
-        fetchChunks();
-      } else {
-        throw new Error(data.detail || t.errorMsg);
-      }
-    } catch (err: any) {
-      setUploadError(err.message || t.errorMsg);
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  const handleDeleteChunk = async (chunkId: number) => {
-    if (!confirm(t.confirmRetract)) return;
-    try {
-      const { error } = await supabase
+      let q = supabase
         .from("curriculum_chunks")
-        .delete()
-        .eq("id", chunkId);
-      if (error) throw error;
-      setChunks((prev) => prev.filter((c) => c.id !== chunkId));
-    } catch (e) {
-      console.error(e);
-    }
+        .select("id, subject, grade, language, source_document, chunk_index, created_at")
+        .order("grade")
+        .order("subject");
+      if (gradeFilter !== "all") q = q.eq("grade", gradeFilter);
+      const { data } = await q;
+
+      // Group by subject + grade
+      const grouped: Record<string, any> = {};
+      (data || []).forEach((c: any) => {
+        const key = `${c.grade}-${c.subject}`;
+        if (!grouped[key]) grouped[key] = { grade: c.grade, subject: c.subject, language: c.language, source: c.source_document, count: 0 };
+        grouped[key].count++;
+      });
+      setChunks(Object.values(grouped));
+    } catch (e) { console.error(e); }
+    finally { setLoadingChunks(false); }
   };
 
-  const handleGradeBandChange = (val: string) => {
-    setGradeBand(val);
-    setLanguage(val === "6" || val === "8" ? "Afaan Oromo" : "English");
+  // ── Actions ──────────────────────────────────────────────────────────────────
+
+  const toggleActive = async (profile: Profile) => {
+    if (profile.role === "admin") return;
+    setActionLoading(profile.id);
+    try {
+      await supabase
+        .from("profiles")
+        .update({ is_active: !profile.is_active })
+        .eq("id", profile.id);
+      setUsers(prev => prev.map(u => u.id === profile.id ? { ...u, is_active: !u.is_active } : u));
+    } catch (e) { console.error(e); }
+    finally { setActionLoading(null); }
   };
+
+  const deleteUser = async (profile: Profile) => {
+    if (profile.role === "admin") return;
+    setActionLoading(profile.id);
+    try {
+      // Delete via service role through API
+      const res = await fetch(`/api/admin/users?userId=${profile.id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${session?.access_token}` },
+      });
+      if (res.ok) {
+        setUsers(prev => prev.filter(u => u.id !== profile.id));
+        if (stats) setStats({ ...stats, totalUsers: stats.totalUsers - 1 });
+      }
+    } catch (e) { console.error(e); }
+    finally { setActionLoading(null); setConfirmDelete(null); }
+  };
+
+  const deleteSubjectChunks = async (grade: string, subject: string) => {
+    if (!confirm(`Delete ALL chunks for ${subject} (Grade ${grade})? This removes it from AI knowledge.`)) return;
+    try {
+      await supabase.from("curriculum_chunks").delete().eq("grade", grade).eq("subject", subject);
+      fetchChunks();
+    } catch (e) { console.error(e); }
+  };
+
+  if (loading || !user || user.role !== "admin") return null;
+
+  // ── Filtered users ────────────────────────────────────────────────────────────
+  const filteredUsers = users.filter(u =>
+    (u.name?.toLowerCase().includes(search.toLowerCase()) ||
+     u.role?.toLowerCase().includes(search.toLowerCase()))
+  );
+
+  const roleColor = (role: string) => ({
+    student: "var(--primary)", teacher: "var(--secondary)",
+    admin: "var(--danger)", director: "var(--accent)"
+  }[role] || "var(--text-muted)");
+
+  const tabs = [
+    { id: "overview" as Tab, label: "Overview", icon: <LayoutDashboard size={15} /> },
+    { id: "users" as Tab, label: "Users", icon: <Users size={15} /> },
+    { id: "curriculum" as Tab, label: "Curriculum", icon: <BookOpen size={15} /> },
+  ];
 
   return (
     <AuthGuard>
       <div className="app-container">
         <Sidebar />
+        <main className="main-content" style={{ display: "flex", flexDirection: "column" }}>
 
-        <main
-          className="main-content"
-          style={{ display: "flex", flexDirection: "column", gap: "2rem" }}
-        >
-        {/* Page Header */}
-        <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
-          <img
-            src="/logo.png"
-            alt="I-Pass-A"
-            style={{ width: "56px", height: "56px", borderRadius: "10px", objectFit: "cover" }}
-          />
-          <div>
-            <h1 style={{ fontSize: "2rem", fontWeight: 700, marginBottom: "0.25rem" }}>
-              {t.headerTitle}
-            </h1>
-            <p style={{ color: "var(--text-secondary)" }}>{t.headerDesc}</p>
+          {/* Header */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "2rem", flexWrap: "wrap", gap: "1rem" }}>
+            <div>
+              <h1 style={{ fontSize: "2rem", fontWeight: 700, display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                <Shield size={28} style={{ color: "var(--primary)" }} /> Admin Panel
+              </h1>
+              <p style={{ color: "var(--text-secondary)" }}>Full platform control — users, curriculum, and activity</p>
+            </div>
+            <button onClick={() => { if (tab === "overview") fetchStats(); else if (tab === "users") fetchUsers(); else fetchChunks(); }}
+              className="btn btn-outline" style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+              <RefreshCw size={14} /> Refresh
+            </button>
           </div>
-        </div>
 
-        {/* Teacher read-only notice */}
-        {!isAdmin && (
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "0.75rem",
-              padding: "1rem 1.25rem",
-              borderRadius: "var(--radius-sm)",
-              background: "rgba(99, 102, 241, 0.07)",
-              border: "1px solid rgba(99, 102, 241, 0.2)",
-              color: "var(--accent)",
-              fontSize: "0.9rem",
-            }}
-          >
-            <Lock size={18} />
-            <span>{t.teacherReadOnly}</span>
+          {/* Tab Bar */}
+          <div style={{ display: "flex", gap: "0.25rem", borderBottom: "1px solid var(--glass-border)", marginBottom: "2rem" }}>
+            {tabs.map(t => (
+              <button key={t.id} onClick={() => setTab(t.id)} style={{
+                display: "flex", alignItems: "center", gap: "0.5rem",
+                padding: "0.75rem 1.25rem", fontSize: "0.875rem",
+                fontWeight: tab === t.id ? 600 : 400,
+                background: "transparent", border: "none", cursor: "pointer",
+                color: tab === t.id ? "var(--primary)" : "var(--text-secondary)",
+                borderBottom: tab === t.id ? "2px solid var(--primary)" : "2px solid transparent",
+                marginBottom: "-1px", transition: "all 0.15s",
+              }}>
+                {t.icon} {t.label}
+              </button>
+            ))}
           </div>
-        )}
 
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: isAdmin ? "1fr 1.8fr" : "1fr",
-            gap: "2rem",
-          }}
-        >
-          {/* Upload Form — admin only */}
-          {isAdmin && (
-            <div className="glass-panel" style={{ padding: "2rem", height: "fit-content" }}>
-              <h2
-                style={{
-                  fontSize: "1.25rem",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "0.5rem",
-                  marginBottom: "1.5rem",
-                }}
-              >
-                <Upload size={20} style={{ color: "var(--primary)" }} /> {t.uploadHeading}
-              </h2>
+          {/* ── OVERVIEW TAB ─────────────────────────────────────────────────── */}
+          {tab === "overview" && (
+            <div className="animate-fade-in" style={{ display: "flex", flexDirection: "column", gap: "2rem" }}>
+              {loadingStats ? (
+                <p style={{ color: "var(--text-secondary)" }}>Loading stats...</p>
+              ) : stats && (
+                <>
+                  {/* Stats Grid */}
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "1rem" }}>
+                    {[
+                      { label: "Total Users", value: stats.totalUsers, icon: <Users size={20} />, color: "var(--primary)" },
+                      { label: "Students", value: stats.students, icon: <GraduationCap size={20} />, color: "var(--secondary)" },
+                      { label: "Teachers", value: stats.teachers, icon: <Shield size={20} />, color: "var(--accent)" },
+                      { label: "Tutor Sessions", value: stats.totalSessions, icon: <MessageSquare size={20} />, color: "var(--primary)" },
+                      { label: "Exams Generated", value: stats.totalExams, icon: <Award size={20} />, color: "var(--secondary)" },
+                      { label: "Curriculum Chunks", value: stats.totalChunks, icon: <BookOpen size={20} />, color: "var(--accent)" },
+                    ].map((s, i) => (
+                      <div key={i} className="glass-panel" style={{ padding: "1.25rem 1.5rem", display: "flex", alignItems: "center", gap: "1rem" }}>
+                        <div style={{ width: "42px", height: "42px", borderRadius: "10px", background: `${s.color}18`, display: "flex", alignItems: "center", justifyContent: "center", color: s.color, flexShrink: 0 }}>
+                          {s.icon}
+                        </div>
+                        <div>
+                          <div style={{ fontSize: "1.75rem", fontWeight: 800, lineHeight: 1 }}>{s.value}</div>
+                          <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginTop: "0.2rem" }}>{s.label}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
 
-              {uploadSuccess && (
-                <div
-                  style={{
-                    background: "rgba(34, 197, 94, 0.1)",
-                    border: "1px solid rgba(34, 197, 94, 0.2)",
-                    color: "var(--success)",
-                    padding: "0.75rem 1rem",
-                    borderRadius: "var(--radius-sm)",
-                    fontSize: "0.85rem",
-                    marginBottom: "1.25rem",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "0.5rem",
-                  }}
-                >
-                  <CheckCircle2 size={16} />
-                  <span>{uploadSuccess}</span>
-                </div>
+                  {/* Role & Grade Breakdown */}
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: "1.5rem" }}>
+                    <div className="glass-panel" style={{ padding: "1.5rem" }}>
+                      <h3 style={{ fontSize: "1rem", fontWeight: 700, marginBottom: "1.25rem" }}>Users by Role</h3>
+                      {[
+                        { role: "student", count: stats.students, color: "var(--primary)" },
+                        { role: "teacher", count: stats.teachers, color: "var(--secondary)" },
+                        { role: "director", count: stats.directors, color: "var(--accent)" },
+                        { role: "admin", count: stats.admins, color: "var(--danger)" },
+                      ].map(r => (
+                        <div key={r.role} style={{ marginBottom: "0.75rem" }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.85rem", marginBottom: "0.35rem" }}>
+                            <span style={{ textTransform: "capitalize", color: "var(--text-secondary)" }}>{r.role}</span>
+                            <span style={{ fontWeight: 700, color: r.color }}>{r.count}</span>
+                          </div>
+                          <div style={{ height: "6px", background: "var(--glass-border)", borderRadius: "3px", overflow: "hidden" }}>
+                            <div style={{ height: "100%", width: stats.totalUsers ? `${(r.count / stats.totalUsers) * 100}%` : "0%", background: r.color, borderRadius: "3px", transition: "width 0.5s" }} />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="glass-panel" style={{ padding: "1.5rem" }}>
+                      <h3 style={{ fontSize: "1rem", fontWeight: 700, marginBottom: "1.25rem" }}>Students by Grade</h3>
+                      {["6", "8", "12"].map(g => {
+                        const count = stats.gradeBreakdown[g] || 0;
+                        return (
+                          <div key={g} style={{ marginBottom: "0.75rem" }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.85rem", marginBottom: "0.35rem" }}>
+                              <span style={{ color: "var(--text-secondary)" }}>Grade {g}</span>
+                              <span style={{ fontWeight: 700, color: "var(--primary)" }}>{count}</span>
+                            </div>
+                            <div style={{ height: "6px", background: "var(--glass-border)", borderRadius: "3px", overflow: "hidden" }}>
+                              <div style={{ height: "100%", width: stats.students ? `${(count / stats.students) * 100}%` : "0%", background: "var(--primary)", borderRadius: "3px", transition: "width 0.5s" }} />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </>
               )}
-
-              {uploadError && (
-                <div
-                  style={{
-                    background: "rgba(239, 68, 68, 0.1)",
-                    border: "1px solid rgba(239, 68, 68, 0.2)",
-                    color: "var(--danger)",
-                    padding: "0.75rem 1rem",
-                    borderRadius: "var(--radius-sm)",
-                    fontSize: "0.85rem",
-                    marginBottom: "1.25rem",
-                  }}
-                >
-                  {uploadError}
-                </div>
-              )}
-
-              <form onSubmit={handleUploadSubmit}>
-                <div className="form-group">
-                  <label className="form-label">{t.labelFile}</label>
-                  <input
-                    type="file"
-                    accept=".pdf,.txt"
-                    required
-                    onChange={(e) =>
-                      e.target.files?.[0] && setFile(e.target.files[0])
-                    }
-                    style={{
-                      border: "1px dashed var(--glass-border)",
-                      padding: "1rem",
-                      borderRadius: "var(--radius-sm)",
-                      cursor: "pointer",
-                      width: "100%",
-                    }}
-                  />
-                  {file && (
-                    <span style={{ fontSize: "0.8rem", color: "var(--secondary)", marginTop: "0.35rem", display: "block" }}>
-                      <BookOpen size={12} style={{ display: "inline", marginRight: "4px" }} />
-                      {file.name}
-                    </span>
-                  )}
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">{t.labelSubject}</label>
-                  <input
-                    type="text"
-                    className="form-input"
-                    placeholder={t.placeholderSubject}
-                    required
-                    value={subject}
-                    onChange={(e) => setSubject(e.target.value)}
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">{t.labelTopic}</label>
-                  <input
-                    type="text"
-                    className="form-input"
-                    placeholder={t.placeholderTopic}
-                    required
-                    value={topic}
-                    onChange={(e) => setTopic(e.target.value)}
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">{t.labelGrade}</label>
-                  <select
-                    className="form-select"
-                    value={gradeBand}
-                    onChange={(e) => handleGradeBandChange(e.target.value)}
-                  >
-                    <option value="6">{t.optGrade6}</option>
-                    <option value="8">{t.optGrade8}</option>
-                    <option value="12">{t.optGrade12}</option>
-                  </select>
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">{t.labelLanguage}</label>
-                  <input
-                    type="text"
-                    className="form-input"
-                    value={language}
-                    disabled
-                    style={{ background: "rgba(255,255,255,0.02)", cursor: "not-allowed" }}
-                  />
-                </div>
-
-                <button
-                  type="submit"
-                  className="btn btn-primary"
-                  disabled={uploading || !file || !subject || !topic}
-                  style={{ width: "100%", marginTop: "1rem" }}
-                >
-                  {uploading ? t.uploadingBtn : t.btnSubmit}
-                </button>
-              </form>
             </div>
           )}
 
-          {/* Vector DB Status — both roles */}
-          <div
-            className="glass-panel"
-            style={{
-              padding: "2rem",
-              overflow: "hidden",
-              display: "flex",
-              flexDirection: "column",
-              minHeight: "500px",
-            }}
-          >
-            <h2
-              style={{
-                fontSize: "1.25rem",
-                display: "flex",
-                alignItems: "center",
-                gap: "0.5rem",
-                marginBottom: "1.5rem",
-              }}
-            >
-              <Database size={20} style={{ color: "var(--secondary)" }} />
-              {t.dbHeading} ({chunks.length} {t.chunksCount})
-            </h2>
+          {/* ── USERS TAB ────────────────────────────────────────────────────── */}
+          {tab === "users" && (
+            <div className="animate-fade-in" style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
 
-            <div style={{ flex: 1, overflowY: "auto" }}>
-              {fetchingChunks ? (
-                <p style={{ color: "var(--text-secondary)" }}>{t.loadingDB}</p>
-              ) : chunks.length === 0 ? (
-                <div
-                  style={{
-                    textAlign: "center",
-                    padding: "4rem 1rem",
-                    color: "var(--text-secondary)",
-                  }}
-                >
-                  <FileText
-                    size={32}
-                    style={{ color: "var(--text-muted)", marginBottom: "0.5rem" }}
+              {/* Search & Filter */}
+              <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap" }}>
+                <div style={{ position: "relative", flex: 1, minWidth: "200px" }}>
+                  <Search size={15} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)" }} />
+                  <input
+                    type="text"
+                    className="form-input"
+                    placeholder="Search by name..."
+                    value={search}
+                    onChange={e => setSearch(e.target.value)}
+                    style={{ paddingLeft: "2.25rem", width: "100%" }}
                   />
-                  <p>{t.emptyDB}</p>
+                </div>
+                <select
+                  className="form-select"
+                  value={roleFilter}
+                  onChange={e => { setRoleFilter(e.target.value); setTimeout(fetchUsers, 0); }}
+                  style={{ minWidth: "150px" }}
+                >
+                  <option value="all">All Roles</option>
+                  <option value="student">Students</option>
+                  <option value="teacher">Teachers</option>
+                  <option value="director">Directors</option>
+                  <option value="admin">Admins</option>
+                </select>
+              </div>
+
+              {/* User Count */}
+              <p style={{ color: "var(--text-secondary)", fontSize: "0.875rem" }}>
+                Showing <strong style={{ color: "var(--text-primary)" }}>{filteredUsers.length}</strong> users
+              </p>
+
+              {/* Users Table */}
+              {loadingUsers ? (
+                <p style={{ color: "var(--text-secondary)" }}>Loading users...</p>
+              ) : filteredUsers.length === 0 ? (
+                <div className="glass-panel" style={{ padding: "3rem", textAlign: "center", color: "var(--text-secondary)" }}>
+                  <Users size={32} style={{ color: "var(--text-muted)", marginBottom: "0.75rem" }} />
+                  <p>No users found.</p>
                 </div>
               ) : (
-                <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-                  {chunks.map((c) => (
-                    <div
-                      key={c.id}
-                      style={{
-                        padding: "1rem",
-                        borderRadius: "8px",
-                        border: "1px solid var(--glass-border)",
-                        background: "rgba(0,0,0,0.15)",
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: "0.5rem",
-                      }}
-                    >
-                      <div
-                        style={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          alignItems: "center",
-                        }}
-                      >
-                        <div style={{ display: "flex", flexWrap: "wrap", gap: "0.35rem" }}>
-                          <span
-                            style={{
-                              fontSize: "0.7rem",
-                              background: "rgba(14, 165, 233, 0.1)",
-                              color: "var(--primary)",
-                              padding: "0.15rem 0.4rem",
-                              borderRadius: "4px",
-                            }}
-                          >
-                            Grade {c.grade}
-                          </span>
-                          <span
-                            style={{
-                              fontSize: "0.7rem",
-                              background: "rgba(20, 184, 166, 0.1)",
-                              color: "var(--secondary)",
-                              padding: "0.15rem 0.4rem",
-                              borderRadius: "4px",
-                            }}
-                          >
-                            {c.subject}
-                          </span>
-                          <span
-                            style={{
-                              fontSize: "0.7rem",
-                              background: "rgba(99, 102, 241, 0.1)",
-                              color: "var(--accent)",
-                              padding: "0.15rem 0.4rem",
-                              borderRadius: "4px",
-                            }}
-                          >
-                            {c.topic}
-                          </span>
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+                  {filteredUsers.map(u => (
+                    <div key={u.id} className="glass-panel" style={{ padding: "1rem 1.5rem", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "1rem", flexWrap: "wrap", opacity: u.is_active ? 1 : 0.6 }}>
+                      
+                      {/* Left: User info */}
+                      <div style={{ display: "flex", alignItems: "center", gap: "1rem", flex: 1, minWidth: "200px" }}>
+                        <div style={{ width: "40px", height: "40px", borderRadius: "50%", background: `${roleColor(u.role)}18`, border: `1px solid ${roleColor(u.role)}40`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.85rem", fontWeight: 700, color: roleColor(u.role), flexShrink: 0 }}>
+                          {u.name?.charAt(0)?.toUpperCase() || "?"}
                         </div>
-
-                        {isAdmin ? (
-                          <button
-                            onClick={() => handleDeleteChunk(c.id)}
-                            style={{
-                              border: "none",
-                              background: "none",
-                              color: "var(--danger)",
-                              cursor: "pointer",
-                              padding: "0.25rem",
-                              borderRadius: "4px",
-                            }}
-                            className="glass-panel-hover"
-                            title="Retract Chunk"
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        ) : (
-                          <span
-                            style={{ fontSize: "0.65rem", color: "var(--text-muted)" }}
-                          >
-                            v{c.version}
-                          </span>
-                        )}
+                        <div>
+                          <div style={{ fontWeight: 600, fontSize: "0.95rem" }}>{u.name}</div>
+                          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginTop: "0.25rem", flexWrap: "wrap" }}>
+                            <span style={{ fontSize: "0.72rem", fontWeight: 700, color: roleColor(u.role), background: `${roleColor(u.role)}12`, padding: "0.1rem 0.45rem", borderRadius: "6px", textTransform: "capitalize" }}>
+                              {u.role}
+                            </span>
+                            {(u.grade || u.grade_taught) && (
+                              <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", display: "flex", alignItems: "center", gap: "0.2rem" }}>
+                                <GraduationCap size={10} /> Grade {u.grade || u.grade_taught}
+                              </span>
+                            )}
+                            <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", display: "flex", alignItems: "center", gap: "0.2rem" }}>
+                              <Clock size={10} /> {new Date(u.created_at).toLocaleDateString()}
+                            </span>
+                          </div>
+                        </div>
                       </div>
 
-                      <div
-                        style={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          alignItems: "center",
-                        }}
-                      >
-                        <p
-                          style={{
-                            fontSize: "0.825rem",
-                            color: "var(--text-secondary)",
-                            fontStyle: "italic",
-                            margin: 0,
-                          }}
-                        >
-                          {t.sourceLabel}: {c.source_document}
-                        </p>
-                        <span
-                          style={{
-                            fontSize: "0.72rem",
-                            color: "var(--secondary)",
-                            background: "rgba(20, 184, 166, 0.05)",
-                            padding: "0.1rem 0.4rem",
-                            borderRadius: "4px",
-                            border: "1px solid rgba(20, 184, 166, 0.1)",
-                          }}
-                        >
-                          {t.uploadedByLabel}: <strong>{c.uploaded_by}</strong>
+                      {/* Middle: Status badges */}
+                      <div style={{ display: "flex", gap: "0.5rem", flexShrink: 0 }}>
+                        <span style={{ fontSize: "0.72rem", padding: "0.2rem 0.6rem", borderRadius: "6px", fontWeight: 600, background: u.email_verified ? "rgba(34,197,94,0.1)" : "rgba(245,158,11,0.1)", color: u.email_verified ? "var(--success)" : "var(--warning)", border: `1px solid ${u.email_verified ? "rgba(34,197,94,0.2)" : "rgba(245,158,11,0.2)"}`, display: "flex", alignItems: "center", gap: "0.25rem" }}>
+                          <Mail size={10} /> {u.email_verified ? "Verified" : "Unverified"}
+                        </span>
+                        <span style={{ fontSize: "0.72rem", padding: "0.2rem 0.6rem", borderRadius: "6px", fontWeight: 600, background: u.is_active ? "rgba(34,197,94,0.1)" : "rgba(239,68,68,0.1)", color: u.is_active ? "var(--success)" : "var(--danger)", border: `1px solid ${u.is_active ? "rgba(34,197,94,0.2)" : "rgba(239,68,68,0.2)"}`, display: "flex", alignItems: "center", gap: "0.25rem" }}>
+                          {u.is_active ? <><CheckCircle size={10} /> Active</> : <><XCircle size={10} /> Inactive</>}
                         </span>
                       </div>
 
-                      <p
-                        style={{
-                          fontSize: "0.85rem",
-                          color: "#fff",
-                          lineHeight: 1.4,
-                          margin: 0,
-                        }}
-                      >
-                        {c.content_preview}
-                      </p>
+                      {/* Right: Actions — can't touch other admins */}
+                      {u.role !== "admin" && (
+                        <div style={{ display: "flex", gap: "0.5rem", flexShrink: 0 }}>
+                          <button
+                            onClick={() => toggleActive(u)}
+                            disabled={actionLoading === u.id}
+                            className="btn btn-outline"
+                            style={{ padding: "0.4rem 0.75rem", fontSize: "0.8rem", display: "flex", alignItems: "center", gap: "0.35rem", color: u.is_active ? "var(--warning)" : "var(--success)", borderColor: u.is_active ? "rgba(245,158,11,0.3)" : "rgba(34,197,94,0.3)" }}
+                            title={u.is_active ? "Deactivate user" : "Reactivate user"}
+                          >
+                            {u.is_active ? <><UserX size={13} /> Deactivate</> : <><UserCheck size={13} /> Activate</>}
+                          </button>
+                          <button
+                            onClick={() => setConfirmDelete(u)}
+                            disabled={actionLoading === u.id}
+                            className="btn btn-outline"
+                            style={{ padding: "0.4rem 0.75rem", fontSize: "0.8rem", display: "flex", alignItems: "center", gap: "0.35rem", color: "var(--danger)", borderColor: "rgba(239,68,68,0.3)" }}
+                            title="Delete user permanently"
+                          >
+                            <Trash2 size={13} /> Delete
+                          </button>
+                        </div>
+                      )}
+                      {u.role === "admin" && (
+                        <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontStyle: "italic", flexShrink: 0 }}>
+                          Admin — protected
+                        </span>
+                      )}
                     </div>
                   ))}
                 </div>
               )}
             </div>
+          )}
 
-            {!isAdmin && (
-              <div
-                style={{
-                  marginTop: "1rem",
-                  padding: "0.75rem",
-                  background: "rgba(245, 158, 11, 0.05)",
-                  border: "1px solid rgba(245, 158, 11, 0.15)",
-                  borderRadius: "var(--radius-sm)",
-                  color: "var(--warning)",
-                  fontSize: "0.85rem",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "0.5rem",
-                }}
-              >
-                <ShieldAlert size={16} />
-                <span>{t.teacherReadOnly}</span>
+          {/* ── CURRICULUM TAB ──────────────────────────────────────────────── */}
+          {tab === "curriculum" && (
+            <div className="animate-fade-in" style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+              
+              <div style={{ display: "flex", gap: "1rem", alignItems: "center", flexWrap: "wrap" }}>
+                <h3 style={{ fontSize: "1rem", fontWeight: 700 }}>Curriculum in Vector DB</h3>
+                <select
+                  className="form-select"
+                  value={gradeFilter}
+                  onChange={e => { setGradeFilter(e.target.value); setTimeout(fetchChunks, 0); }}
+                  style={{ minWidth: "140px" }}
+                >
+                  <option value="all">All Grades</option>
+                  <option value="6">Grade 6</option>
+                  <option value="8">Grade 8</option>
+                  <option value="12">Grade 12</option>
+                </select>
+                <span style={{ fontSize: "0.85rem", color: "var(--text-secondary)" }}>
+                  {chunks.reduce((s, c) => s + c.count, 0).toLocaleString()} total chunks
+                </span>
               </div>
-            )}
-          </div>
-        </div>
-      </main>
-    </div>
+
+              {loadingChunks ? (
+                <p style={{ color: "var(--text-secondary)" }}>Loading curriculum...</p>
+              ) : chunks.length === 0 ? (
+                <div className="glass-panel" style={{ padding: "3rem", textAlign: "center", color: "var(--text-secondary)" }}>
+                  <BookOpen size={32} style={{ color: "var(--text-muted)", marginBottom: "0.75rem" }} />
+                  <p>No curriculum chunks found.</p>
+                </div>
+              ) : (
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "1rem" }}>
+                  {chunks.map((c, i) => (
+                    <div key={i} className="glass-panel" style={{ padding: "1.25rem", display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                        <div>
+                          <div style={{ display: "flex", gap: "0.4rem", marginBottom: "0.35rem" }}>
+                            <span style={{ fontSize: "0.7rem", background: "rgba(14,165,233,0.1)", color: "var(--primary)", padding: "0.15rem 0.45rem", borderRadius: "5px" }}>Grade {c.grade}</span>
+                            <span style={{ fontSize: "0.7rem", background: "rgba(20,184,166,0.1)", color: "var(--secondary)", padding: "0.15rem 0.45rem", borderRadius: "5px" }}>{c.language}</span>
+                          </div>
+                          <h4 style={{ fontSize: "0.95rem", fontWeight: 600 }}>{c.subject}</h4>
+                        </div>
+                        <button
+                          onClick={() => deleteSubjectChunks(c.grade, c.subject)}
+                          className="btn btn-outline"
+                          style={{ padding: "0.3rem 0.5rem", color: "var(--danger)", borderColor: "rgba(239,68,68,0.3)" }}
+                          title={`Delete all ${c.subject} chunks`}
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+                      <div style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>
+                        <strong style={{ color: "var(--text-primary)", fontSize: "1.1rem" }}>{c.count.toLocaleString()}</strong> chunks
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── DELETE CONFIRM MODAL ─────────────────────────────────────────── */}
+          {confirmDelete && (
+            <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: "1rem" }}>
+              <div className="glass-panel animate-fade-in" style={{ maxWidth: "420px", width: "100%", padding: "2rem", textAlign: "center" }}>
+                <div style={{ width: "64px", height: "64px", borderRadius: "50%", background: "rgba(239,68,68,0.1)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 1.25rem" }}>
+                  <AlertCircle size={30} style={{ color: "var(--danger)" }} />
+                </div>
+                <h3 style={{ fontSize: "1.25rem", fontWeight: 700, marginBottom: "0.5rem" }}>Delete User?</h3>
+                <p style={{ color: "var(--text-secondary)", fontSize: "0.9rem", marginBottom: "0.5rem" }}>
+                  You are about to permanently delete:
+                </p>
+                <p style={{ fontWeight: 700, marginBottom: "1.5rem" }}>
+                  {confirmDelete.name} <span style={{ color: roleColor(confirmDelete.role), fontSize: "0.85rem", textTransform: "capitalize" }}>({confirmDelete.role})</span>
+                </p>
+                <p style={{ color: "var(--danger)", fontSize: "0.82rem", marginBottom: "1.75rem" }}>
+                  This will delete their account, all exam attempts, tutor sessions, and submissions. This cannot be undone.
+                </p>
+                <div style={{ display: "flex", gap: "0.75rem" }}>
+                  <button onClick={() => setConfirmDelete(null)} className="btn btn-outline" style={{ flex: 1 }}>
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => deleteUser(confirmDelete)}
+                    disabled={actionLoading === confirmDelete.id}
+                    className="btn btn-primary"
+                    style={{ flex: 1, background: "var(--danger)", boxShadow: "none" }}
+                  >
+                    {actionLoading === confirmDelete.id ? "Deleting..." : "Delete Permanently"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+        </main>
+      </div>
     </AuthGuard>
   );
 }
