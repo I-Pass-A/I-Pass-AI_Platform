@@ -16,3 +16,4 @@ scripts/textbooks/
 eng.traineddata
 scripts/bio_extracted_*.jpg
 scripts/test_math_img.png
+scripts/_ocr_tmp/
