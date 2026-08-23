@@ -36,11 +36,11 @@ export default function Home() {
   const [forgotError, setForgotError] = useState("");
 
   useEffect(() => {
-    // Handle Supabase PKCE code redirect landing on home page
+    // Handle Supabase PKCE code redirect — happens when user clicks
+    // the password reset link in their email (lands on /?code=...)
     const params = new URLSearchParams(window.location.search);
     const code = params.get("code");
     if (code) {
-      // This is a password reset redirect - forward to reset page
       router.replace(`/auth/reset-password?code=${code}`);
       return;
     }
@@ -86,7 +86,7 @@ export default function Home() {
     setForgotSubmitting(true);
     try {
       const { error: resetErr } = await supabase.auth.resetPasswordForEmail(forgotEmail, {
-        redirectTo: `${window.location.origin}/auth/callback?type=recovery&next=/auth/reset-password`,
+        redirectTo: `${window.location.origin}/auth/reset-password`,
       });
       
       // Always show success message for security (don't reveal if email exists)
