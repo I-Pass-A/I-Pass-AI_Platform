@@ -86,7 +86,7 @@ export default function Home() {
     setForgotSubmitting(true);
     try {
       const { error: resetErr } = await supabase.auth.resetPasswordForEmail(forgotEmail, {
-        redirectTo: `${window.location.origin}/auth/reset-password`,
+        redirectTo: `${window.location.origin}/auth/callback?type=recovery&next=/auth/reset-password`,
       });
       
       // Always show success message for security (don't reveal if email exists)

@@ -23,7 +23,7 @@ export default function ResetPasswordPage() {
       const code = params.get("code");
       const type = params.get("type");
 
-      // PKCE flow: ?code=... (Supabase sends this when using PKCE)
+      // PKCE flow: ?code=... landed directly here
       if (code) {
         const { error } = await supabase.auth.exchangeCodeForSession(code);
         if (error) {
@@ -43,10 +43,15 @@ export default function ResetPasswordPage() {
         return;
       }
 
-      // No token — check existing session
+      // Callback already exchanged code — just check session exists
       const { data: { session } } = await supabase.auth.getSession() as any;
       if (!session) {
-        router.replace("/");
+        // Wait briefly for session to propagate
+        await new Promise(r => setTimeout(r, 1000));
+        const { data: { session: s2 } } = await supabase.auth.getSession() as any;
+        if (!s2) {
+          setError("Reset link expired. Please request a new one.");
+        }
       }
     };
 
