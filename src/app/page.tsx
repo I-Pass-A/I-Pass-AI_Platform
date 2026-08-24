@@ -572,7 +572,7 @@ export default function Home() {
                       required
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      style={{ width: "100%", paddingLeft: "2.5rem" }}
+                      style={{ width: "100%", paddingLeft: "2.5rem", borderColor: !isLogin && password && password.length < 8 ? "var(--danger)" : undefined }}
                     />
                   </div>
                   {isLogin && (
@@ -583,6 +583,35 @@ export default function Home() {
                     >
                       {t.forgotPass}
                     </button>
+                  )}
+                  {/* Password strength indicator — signup only */}
+                  {!isLogin && password.length > 0 && (
+                    <div style={{ marginTop: "0.5rem" }}>
+                      {/* Strength bar */}
+                      <div style={{ height: "4px", borderRadius: "2px", background: "var(--glass-border)", overflow: "hidden", marginBottom: "0.4rem" }}>
+                        <div style={{
+                          height: "100%",
+                          width: password.length >= 12 && /[A-Z]/.test(password) && /[0-9]/.test(password) ? "100%"
+                            : password.length >= 8 ? "65%" : "30%",
+                          background: password.length >= 12 && /[A-Z]/.test(password) && /[0-9]/.test(password) ? "var(--success)"
+                            : password.length >= 8 ? "var(--warning)" : "var(--danger)",
+                          transition: "width 0.3s, background 0.3s",
+                          borderRadius: "2px"
+                        }} />
+                      </div>
+                      {/* Requirements checklist */}
+                      <div style={{ display: "flex", flexDirection: "column", gap: "0.2rem" }}>
+                        {[
+                          { label: lang === "EN" ? "At least 8 characters" : "Qubee 8 ol", met: password.length >= 8 },
+                          { label: lang === "EN" ? "One uppercase letter" : "Qubee guddaa tokko", met: /[A-Z]/.test(password) },
+                          { label: lang === "EN" ? "One number" : "Lakkoofsa tokko", met: /[0-9]/.test(password) },
+                        ].map((req, i) => (
+                          <span key={i} style={{ fontSize: "0.72rem", display: "flex", alignItems: "center", gap: "0.3rem", color: req.met ? "var(--success)" : "var(--text-muted)" }}>
+                            {req.met ? "✓" : "○"} {req.label}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
                   )}
                 </div>
 
@@ -631,7 +660,7 @@ export default function Home() {
                 <button
                   type="submit"
                   className="btn btn-primary"
-                  disabled={submitting || (!isLogin && !termsAccepted)}
+                  disabled={submitting || (!isLogin && !termsAccepted) || (!isLogin && (password.length < 8 || !/[A-Z]/.test(password) || !/[0-9]/.test(password)))}
                   style={{ width: "100%", marginTop: "1rem" }}
                 >
                   {submitting ? "..." : isLogin ? t.signInBtn : t.signUpBtn}
