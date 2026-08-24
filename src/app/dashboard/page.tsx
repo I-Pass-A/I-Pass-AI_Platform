@@ -203,6 +203,9 @@ export default function DashboardPage() {
               {isAO
                 ? `Kutaa ${activeGrade} · ${user.language}`
                 : `Grade ${activeGrade} · ${user.language}${isTeacher ? " · " + (isAO ? "Barsiisaa" : "Teacher") : ""}`}
+              {(user as any).school_name && (
+                <span style={{ color: "var(--text-muted)" }}> · {(user as any).school_name}</span>
+              )}
             </p>
           </div>
           <img src="/logo.png" alt="I-Pass-A" style={{ width: "52px", height: "52px", borderRadius: "10px", objectFit: "cover", flexShrink: 0 }} />

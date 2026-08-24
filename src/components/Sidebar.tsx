@@ -247,6 +247,11 @@ export default function Sidebar() {
               <p style={{ fontSize: "0.75rem", color: "var(--text-secondary)", textTransform: "capitalize" }}>
                 {roleLabel}
               </p>
+              {(user as any).school_name && (
+                <p style={{ fontSize: "0.7rem", color: "var(--text-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginTop: "0.1rem" }}>
+                  {(user as any).school_name}
+                </p>
+              )}
             </div>
           </div>
 
