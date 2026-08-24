@@ -104,6 +104,7 @@ function ExamTaker({
         });
         const data = await res.json();
         if (res.ok) { setAssessment(data); onSubmitted?.(data); }
+        else { console.error("Exam submit failed:", data); }
       }
     } catch (e) { console.error(e); } finally { setSubmitting(false); }
   };
@@ -341,6 +342,7 @@ export default function ExamsPage() {
   const [pubDueTime, setPubDueTime] = useState("23:59");
   const [publishing, setPublishing] = useState(false);
   const [publishSuccess, setPublishSuccess] = useState("");
+  const [publishError, setPublishError] = useState("");
 
   // Grading state
   const [gradingAssignment, setGradingAssignment] = useState<Assignment | null>(null);
@@ -435,17 +437,18 @@ export default function ExamsPage() {
     try {
       const { data } = await supabase
         .from("assignment_submissions")
-        .select("id, student_id, answers, raw_score, teacher_score, teacher_feedback, graded, submitted_at")
+        .select(`
+          id, student_id, answers, raw_score, teacher_score,
+          teacher_feedback, graded, submitted_at,
+          profiles ( name )
+        `)
         .eq("assignment_id", assignment.id)
         .order("submitted_at", { ascending: true });
 
-      // Enrich with student names
-      const enriched: Submission[] = await Promise.all(
-        (data || []).map(async (sub: any) => {
-          const { data: profile } = await supabase.from("profiles").select("name").eq("id", sub.student_id).single();
-          return { ...sub, student_name: profile?.name ?? sub.student_id.slice(0, 8) };
-        })
-      );
+      const enriched: Submission[] = (data || []).map((sub: any) => ({
+        ...sub,
+        student_name: sub.profiles?.name ?? sub.student_id.slice(0, 8),
+      }));
       setSubmissions(enriched);
     } catch (e) { console.error(e); } finally { setFetchingSubmissions(false); }
   };
@@ -471,7 +474,16 @@ export default function ExamsPage() {
   const handlePublish = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!publishingFor || publishing) return;
+
+    // Validate due date is in the future
+    const dueDateTime = new Date(`${pubDueDate}T${pubDueTime}:00`);
+    if (dueDateTime <= new Date()) {
+      setPublishError(isAO ? "Guyyaan xumuraa fuulduraa ta'uu qaba." : "Due date must be in the future.");
+      return;
+    }
+
     setPublishing(true);
+    setPublishError("");
     try {
       const res = await fetch("/api/assignments", {
         method: "POST",
@@ -479,16 +491,21 @@ export default function ExamsPage() {
         body: JSON.stringify({
           exam_id: publishingFor.exam_id, title: pubTitle,
           assignment_type: pubType, target_grade: pubGrade,
-          due_date: new Date(`${pubDueDate}T${pubDueTime}:00`).toISOString(), publish_now: true,
+          due_date: dueDateTime.toISOString(), publish_now: true,
         }),
       });
+      const data = await res.json();
       if (res.ok) {
         setPublishSuccess(isAO ? "Qormaanni barattoota irratti maxxanfameera!" : "Assignment published to students!");
-        setPublishingFor(null); setPubTitle(""); setPubDueDate(""); setPubDueTime("23:59");
+        setPublishingFor(null); setPubTitle(""); setPubDueDate(""); setPubDueTime("23:59"); setPublishError("");
         fetchAssignments();
         setTimeout(() => setPublishSuccess(""), 4000);
+      } else {
+        setPublishError(data.detail || (isAO ? "Maxxansuun hin danda'amne." : "Failed to publish. Please try again."));
       }
-    } catch (e) { console.error(e); } finally { setPublishing(false); }
+    } catch (e) {
+      setPublishError(isAO ? "Dhaabbatni hin argamne." : "Network error. Please try again.");
+    } finally { setPublishing(false); }
   };
 
   const handleSaveGrade = async (subId: number) => {
@@ -600,6 +617,29 @@ export default function ExamsPage() {
 
                   {sub.teacher_feedback && (
                     <p style={{ fontSize: "0.85rem", color: "var(--text-secondary)", fontStyle: "italic", marginBottom: "0.75rem" }}>{isAO ? "Yaada" : "Feedback"}: {sub.teacher_feedback}</p>
+                  )}
+
+                  {/* Show student answers with question text */}
+                  {Array.isArray(sub.answers) && sub.answers.length > 0 && (
+                    <div style={{ marginBottom: "1rem", padding: "0.875rem 1rem", background: "rgba(0,0,0,0.15)", borderRadius: "8px", border: "1px solid var(--glass-border)" }}>
+                      <p style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", marginBottom: "0.6rem" }}>
+                        {isAO ? "Deebii Barataa" : "Student Answers"}
+                      </p>
+                      <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
+                        {sub.answers.map((ans: any, idx: number) => {
+                          const question = gradingAssignment?.exams?.questions?.find((q: any) => q.id === ans.id);
+                          return (
+                            <div key={idx} style={{ display: "flex", gap: "0.75rem", fontSize: "0.82rem" }}>
+                              <span style={{ color: "var(--primary)", fontWeight: 700, flexShrink: 0 }}>Q{idx + 1}.</span>
+                              <div style={{ minWidth: 0 }}>
+                                {question && <p style={{ color: "var(--text-muted)", margin: 0, marginBottom: "0.15rem", fontSize: "0.78rem" }}>{question.question_text?.slice(0, 80)}{(question.question_text?.length || 0) > 80 ? "..." : ""}</p>}
+                                <span style={{ color: "var(--text-primary)", fontWeight: 500 }}>{ans.answer || <em style={{ color: "var(--text-muted)" }}>No answer</em>}</span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
                   )}
 
                   {gradingSubId === sub.id ? (
@@ -953,6 +993,11 @@ export default function ExamsPage() {
                   <Send size={17} style={{ color: "var(--accent)" }} /> {isAO ? "Hojii Ramaddi" : "Publish Assignment"} — {publishingFor.subject} / {publishingFor.topic}
                 </h2>
                 <form onSubmit={handlePublish} style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: "1rem" }}>
+                  {publishError && (
+                    <div style={{ gridColumn: "1 / -1", padding: "0.75rem 1rem", borderRadius: "var(--radius-sm)", background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", color: "var(--danger)", fontSize: "0.85rem" }}>
+                      {publishError}
+                    </div>
+                  )}
                   <div className="form-group" style={{ margin: 0 }}>
                     <label className="form-label">{isAO ? "Mata-duree Ramaddii" : "Assignment Title"}</label>
                     <input type="text" className="form-input" required value={pubTitle} onChange={(e) => setPubTitle(e.target.value)} placeholder={isAO ? "fkn. Hojii Mana 3" : "e.g. Week 3 Homework"} />
