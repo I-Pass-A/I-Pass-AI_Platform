@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
@@ -28,6 +28,7 @@ interface UserRow {
 
 interface PlatformData {
   users: UserRow[];
+  schools: string[];
   stats: {
     students: number;
     teachers: number;
@@ -38,8 +39,9 @@ interface PlatformData {
     assignments: number;
     submissions: number;
     chunks: number;
+    totalSchools: number;
   };
-  gradeBreakdown: { grade: string; count: number; sessions: number; exams: number }[];
+  gradeBreakdown: { grade: string; students: number; teachers: number; sessions: number; exams: number }[];
   recentActivity: { type: string; label: string; time: string; color: string }[];
   curriculumByGrade: { grade: string; subjects: number; chunks: number }[];
   assignmentStats: { published: number; pending_grade: number; graded: number };
@@ -53,7 +55,7 @@ export default function DirectorPage() {
   const [data, setData] = useState<PlatformData | null>(null);
   const [fetching, setFetching] = useState(true);
   const [expandRole, setExpandRole] = useState<string | null>("student");
-  const [tab, setTab] = useState<"overview" | "users" | "grades" | "curriculum">("overview");
+  const [tab, setTab] = useState<"overview" | "users" | "grades" | "curriculum" | "reports">("overview");
 
   useEffect(() => {
     if (!loading && (!user || user.role !== "director")) router.push("/");
@@ -69,6 +71,7 @@ export default function DirectorPage() {
       const [
         profilesRes, sessionsRes, attemptsRes, assignRes, subRes, chunksRes,
         recentSessionsRes, recentAttemptsRes, subStatsRes,
+        allSessionsRes, allAttemptsRes,
       ] = await Promise.all([
         supabase.from("profiles").select("id,name,role,grade,grade_taught,language,is_active,email_verified,created_at").order("created_at", { ascending: false }),
         supabase.from("tutor_sessions").select("id", { count: "exact", head: true }),
@@ -79,19 +82,42 @@ export default function DirectorPage() {
         supabase.from("tutor_sessions").select("user_id,subject,started_at").order("started_at", { ascending: false }).limit(5),
         supabase.from("exam_attempts").select("student_id,score,submitted_at").order("submitted_at", { ascending: false }).limit(5),
         supabase.from("assignment_submissions").select("graded,raw_score"),
+        // Per-grade usage: all sessions with user profile grade
+        supabase.from("tutor_sessions").select("user_id, profiles!inner(grade, role)"),
+        // Per-grade exams: all attempts with user profile grade
+        supabase.from("exam_attempts").select("student_id, score, profiles!inner(grade)"),
       ]);
 
       const allUsers: UserRow[] = profilesRes.data || [];
       const chunks = chunksRes.data || [];
 
-      // Grade breakdown
+      // Schools from school_name metadata (if column exists)
+      const schoolSet = new Set<string>();
+      allUsers.forEach((u: any) => { if (u.school_name) schoolSet.add(u.school_name); });
+      const schools = Array.from(schoolSet).sort();
+
+      // Grade breakdown with real session/exam counts
       const grades = ["6", "8", "12"];
-      const gradeBreakdown = grades.map(g => ({
-        grade: g,
-        count: allUsers.filter(u => u.grade === g || u.grade_taught === g).length,
-        sessions: 0,
-        exams: 0,
-      }));
+      const allSessions = allSessionsRes.data || [];
+      const allAttempts = allAttemptsRes.data || [];
+
+      const gradeBreakdown = grades.map(g => {
+        const students  = allUsers.filter(u => u.role === "student" && u.grade === g);
+        const teachers  = allUsers.filter(u => u.role === "teacher" && u.grade_taught === g);
+        const studentIds = new Set(students.map(u => u.id));
+        const gradeSessions = allSessions.filter((s: any) => studentIds.has(s.user_id)).length;
+        const gradeExams    = allAttempts.filter((a: any) => studentIds.has(a.student_id)).length;
+        const gradeScores   = allAttempts.filter((a: any) => studentIds.has(a.student_id)).map((a: any) => a.score);
+        const avgScore = gradeScores.length ? Math.round(gradeScores.reduce((s: number, v: number) => s + v, 0) / gradeScores.length) : null;
+        return {
+          grade: g,
+          students: students.length,
+          teachers: teachers.length,
+          sessions: gradeSessions,
+          exams: gradeExams,
+          avgScore,
+        };
+      });
 
       // Curriculum by grade
       const curriculumByGrade = grades.map(g => {
@@ -113,7 +139,7 @@ export default function DirectorPage() {
       for (const s of (recentSessionsRes.data || [])) {
         recentActivity.push({
           type: "session",
-          label: `New tutor session started — ${s.subject || "Unknown subject"}`,
+          label: `Tutor session — ${s.subject || "Unknown subject"}`,
           time: new Date(s.started_at).toLocaleString(),
           color: "var(--primary)",
         });
@@ -130,16 +156,18 @@ export default function DirectorPage() {
 
       setData({
         users: allUsers,
+        schools,
         stats: {
-          students: allUsers.filter(u => u.role === "student").length,
-          teachers: allUsers.filter(u => u.role === "teacher").length,
-          admins: allUsers.filter(u => u.role === "admin").length,
-          totalUsers: allUsers.length,
-          sessions: sessionsRes.count ?? 0,
+          students:    allUsers.filter(u => u.role === "student").length,
+          teachers:    allUsers.filter(u => u.role === "teacher").length,
+          admins:      allUsers.filter(u => u.role === "admin").length,
+          totalUsers:  allUsers.length,
+          sessions:    sessionsRes.count ?? 0,
           examAttempts: attemptsRes.count ?? 0,
           assignments: assignRes.count ?? 0,
           submissions: subRes.count ?? 0,
-          chunks: chunks.length,
+          chunks:      chunks.length,
+          totalSchools: schoolSet.size,
         },
         gradeBreakdown,
         recentActivity,
@@ -164,6 +192,7 @@ export default function DirectorPage() {
     { id: "grades"     as const, label: "By Grade",   icon: <GraduationCap size={15} /> },
     { id: "users"      as const, label: "Users",      icon: <Users size={15} /> },
     { id: "curriculum" as const, label: "Curriculum", icon: <Database size={15} /> },
+    { id: "reports"    as const, label: "Reports",    icon: <TrendingUp size={15} /> },
   ];
 
   const s = data?.stats;
@@ -219,11 +248,11 @@ export default function DirectorPage() {
                   { label: "Total Users",     value: s?.totalUsers,    icon: <Users size={18} />,        color: "var(--primary)" },
                   { label: "Students",        value: s?.students,      icon: <GraduationCap size={18} />, color: "var(--secondary)" },
                   { label: "Teachers",        value: s?.teachers,      icon: <BookOpen size={18} />,      color: "var(--accent)" },
+                  { label: "Schools",         value: s?.totalSchools || "—", icon: <Shield size={18} />, color: "var(--warning)" },
                   { label: "Tutor Sessions",  value: s?.sessions,      icon: <MessageSquare size={18} />, color: "var(--primary)" },
                   { label: "Exams Taken",     value: s?.examAttempts,  icon: <Award size={18} />,         color: "var(--success)" },
                   { label: "Assignments",     value: s?.assignments,   icon: <ClipboardList size={18} />, color: "var(--warning)" },
                   { label: "Submissions",     value: s?.submissions,   icon: <TrendingUp size={18} />,    color: "var(--danger)" },
-                  { label: "Chunks (RAG)",    value: s?.chunks,        icon: <Database size={18} />,      color: "var(--secondary)" },
                 ].map((card, i) => (
                   <div key={i} className="glass-panel" style={{ padding: "1.1rem 1.25rem", display: "flex", alignItems: "center", gap: "0.875rem" }}>
                     <div style={{ width: "38px", height: "38px", borderRadius: "9px", background: `${card.color}18`, display: "flex", alignItems: "center", justifyContent: "center", color: card.color, flexShrink: 0 }}>
@@ -480,6 +509,132 @@ export default function DirectorPage() {
                   <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)" }}>Grades with curriculum</div>
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* ── REPORTS TAB ──────────────────────────────────────────────────── */}
+          {tab === "reports" && (
+            <div className="animate-fade-in" style={{ display: "flex", flexDirection: "column", gap: "2rem" }}>
+
+              {/* Students per grade bar chart */}
+              <div className="glass-panel" style={{ padding: "1.75rem" }}>
+                <h3 style={{ fontSize: "1rem", fontWeight: 700, marginBottom: "1.5rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                  <GraduationCap size={16} style={{ color: "var(--primary)" }} /> Students per Grade
+                </h3>
+                <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+                  {(data?.gradeBreakdown || []).map((g: any) => {
+                    const maxStudents = Math.max(...(data?.gradeBreakdown || []).map((x: any) => x.students), 1);
+                    const color = g.grade === "6" ? "var(--primary)" : g.grade === "8" ? "var(--secondary)" : "var(--accent)";
+                    return (
+                      <div key={g.grade}>
+                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.85rem", marginBottom: "0.4rem" }}>
+                          <span style={{ fontWeight: 600 }}>Grade {g.grade} <span style={{ color: "var(--text-muted)", fontWeight: 400, fontSize: "0.78rem" }}>({g.grade === "12" ? "English" : "Afaan Oromo"})</span></span>
+                          <span style={{ fontWeight: 700, color }}>{g.students} students</span>
+                        </div>
+                        <div style={{ height: "10px", background: "var(--glass-border)", borderRadius: "5px", overflow: "hidden" }}>
+                          <div style={{ height: "100%", width: `${(g.students / maxStudents) * 100}%`, background: color, borderRadius: "5px", transition: "width 0.6s ease" }} />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Usage per grade */}
+              <div className="glass-panel" style={{ padding: "1.75rem" }}>
+                <h3 style={{ fontSize: "1rem", fontWeight: 700, marginBottom: "1.5rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                  <BarChart2 size={16} style={{ color: "var(--secondary)" }} /> Platform Usage by Grade
+                </h3>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "1rem" }}>
+                  {(data?.gradeBreakdown || []).map((g: any) => {
+                    const color = g.grade === "6" ? "var(--primary)" : g.grade === "8" ? "var(--secondary)" : "var(--accent)";
+                    return (
+                      <div key={g.grade} className="glass-panel" style={{ padding: "1.25rem", borderLeft: `3px solid ${color}` }}>
+                        <h4 style={{ fontWeight: 700, fontSize: "1rem", color, marginBottom: "1rem" }}>Grade {g.grade}</h4>
+                        <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem" }}>
+                          {[
+                            { label: "Students",      value: g.students,  icon: <GraduationCap size={13} /> },
+                            { label: "Teachers",      value: g.teachers,  icon: <BookOpen size={13} /> },
+                            { label: "Tutor Sessions",value: g.sessions,  icon: <MessageSquare size={13} /> },
+                            { label: "Exams Taken",   value: g.exams,     icon: <Award size={13} /> },
+                            { label: "Avg Score",     value: g.avgScore !== null ? `${g.avgScore}%` : "—", icon: <TrendingUp size={13} /> },
+                          ].map((row, i) => (
+                            <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.82rem" }}>
+                              <span style={{ color: "var(--text-secondary)", display: "flex", alignItems: "center", gap: "0.35rem" }}>
+                                <span style={{ color }}>{row.icon}</span>{row.label}
+                              </span>
+                              <span style={{ fontWeight: 700, color: "var(--text-primary)" }}>{fetching ? "—" : row.value}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Schools list */}
+              <div className="glass-panel" style={{ padding: "1.75rem" }}>
+                <h3 style={{ fontSize: "1rem", fontWeight: 700, marginBottom: "0.5rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                  <Shield size={16} style={{ color: "var(--accent)" }} /> Schools Registered
+                  <span style={{ fontSize: "0.78rem", fontWeight: 400, color: "var(--text-muted)", marginLeft: "0.25rem" }}>({data?.schools.length || 0})</span>
+                </h3>
+                <p style={{ fontSize: "0.8rem", color: "var(--text-muted)", marginBottom: "1.25rem" }}>
+                  Schools provided by students at signup via the School Name field.
+                </p>
+                {(data?.schools || []).length === 0 ? (
+                  <p style={{ color: "var(--text-muted)", fontSize: "0.875rem", fontStyle: "italic" }}>
+                    No school names recorded yet. Students must include their school when signing up.
+                  </p>
+                ) : (
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
+                    {(data?.schools || []).map((school, i) => (
+                      <span key={i} style={{ fontSize: "0.82rem", padding: "0.35rem 0.875rem", borderRadius: "20px", background: "rgba(99,102,241,0.1)", color: "var(--accent)", border: "1px solid rgba(99,102,241,0.2)" }}>
+                        {school}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Assignment completion report */}
+              <div className="glass-panel" style={{ padding: "1.75rem" }}>
+                <h3 style={{ fontSize: "1rem", fontWeight: 700, marginBottom: "1.5rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                  <ClipboardList size={16} style={{ color: "var(--warning)" }} /> Assignment Completion Report
+                </h3>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: "1rem" }}>
+                  {[
+                    { label: "Published",       value: data?.assignmentStats.published,     color: "var(--primary)",   bg: "rgba(14,165,233,0.08)" },
+                    { label: "Submitted",        value: data?.stats.submissions,             color: "var(--secondary)", bg: "rgba(20,184,166,0.08)" },
+                    { label: "Pending Grading",  value: data?.assignmentStats.pending_grade, color: "var(--warning)",   bg: "rgba(245,158,11,0.08)" },
+                    { label: "Graded",           value: data?.assignmentStats.graded,        color: "var(--success)",   bg: "rgba(34,197,94,0.08)" },
+                  ].map((item, i) => (
+                    <div key={i} style={{ padding: "1.1rem", borderRadius: "10px", background: item.bg, border: `1px solid ${item.color}22`, textAlign: "center" }}>
+                      <div style={{ fontSize: "1.75rem", fontWeight: 800, color: item.color }}>{fetching ? "—" : (item.value ?? 0)}</div>
+                      <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginTop: "0.25rem" }}>{item.label}</div>
+                    </div>
+                  ))}
+                </div>
+                {/* Completion rate bar */}
+                {(data?.stats.submissions || 0) > 0 && (data?.assignmentStats.published || 0) > 0 && (
+                  <div style={{ marginTop: "1.5rem" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.82rem", marginBottom: "0.5rem" }}>
+                      <span style={{ color: "var(--text-secondary)" }}>Grading completion rate</span>
+                      <span style={{ fontWeight: 700, color: "var(--success)" }}>
+                        {Math.round(((data?.assignmentStats.graded || 0) / Math.max(data?.stats.submissions || 1, 1)) * 100)}%
+                      </span>
+                    </div>
+                    <div style={{ height: "8px", background: "var(--glass-border)", borderRadius: "4px", overflow: "hidden" }}>
+                      <div style={{
+                        height: "100%",
+                        width: `${Math.round(((data?.assignmentStats.graded || 0) / Math.max(data?.stats.submissions || 1, 1)) * 100)}%`,
+                        background: "var(--success)", borderRadius: "4px", transition: "width 0.6s ease"
+                      }} />
+                    </div>
+                  </div>
+                )}
+              </div>
+
             </div>
           )}
 
