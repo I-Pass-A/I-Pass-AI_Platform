@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+﻿import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase";
 
 // Decode JWT payload without network call — avoids extra round trip to Supabase Auth
@@ -136,6 +136,38 @@ export async function POST(req: NextRequest) {
       .single();
 
     if (error) throw error;
+
+    // Fire assignment notification email to students (non-blocking)
+    if (publish_now === true && data) {
+      // Get exam subject/topic for the email
+      const { data: examData } = await supabaseAdmin
+        .from("exams")
+        .select("subject, topic")
+        .eq("id", exam_id)
+        .single();
+
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://i-pass-ai-platform.vercel.app";
+
+      // Fire and forget — don't block the response
+      fetch(`${appUrl}/api/notifications/assignment`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": req.headers.get("authorization") || "",
+        },
+        body: JSON.stringify({
+          assignment_id: data.id,
+          title,
+          subject: examData?.subject || "",
+          topic: examData?.topic || "",
+          due_date,
+          target_grade,
+          assignment_type,
+        }),
+      }).then(r => r.json())
+        .then(r => console.log(`📧 Notifications: ${r.message || r.error}`))
+        .catch(e => console.error("Notification dispatch failed:", e.message));
+    }
 
     return NextResponse.json({ assignment: data }, { status: 201 });
   } catch (err: any) {
