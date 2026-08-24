@@ -96,7 +96,17 @@ function ExamTaker({
           body: JSON.stringify({ assignment_id: assignmentId, answers: formattedAnswers }),
         });
         const data = await res.json();
-        if (res.ok) setAssignmentResult(data);
+        if (res.ok) {
+          setAssignmentResult(data);
+        } else {
+          console.error("Assignment submit failed:", data);
+          // Show error to user
+          setAssignmentResult({
+            graded: false,
+            raw_score: null,
+            message: data.detail || "Submission failed. Please try again.",
+          });
+        }
       } else {
         const res = await fetch("/api/exams/submit", {
           method: "POST", headers,
