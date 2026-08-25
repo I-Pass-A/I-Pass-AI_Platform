@@ -41,7 +41,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const fetchProfile = async (userId: string) => {
     try {
-      // First try with all columns
+      // Fetch base columns first
       const { data, error } = await supabase
         .from("profiles")
         .select(`id, name, role, grade, grade_taught, language, created_at`)
@@ -50,8 +50,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (error) throw error;
 
-      // Try to get extra columns, default to safe values if they don't exist
-      let extraData = {
+      // Safe defaults for extra columns
+      const extraData = {
         email_verified: true,
         is_active: true,
         is_minor: false,
@@ -59,6 +59,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         parental_consent_given: true,
       };
 
+      // Set user immediately with defaults so UI renders fast
+      setUser({ ...data, ...extraData });
+
+      // Then try to fetch extra columns without triggering loading state
       try {
         const { data: extra } = await supabase
           .from("profiles")
@@ -66,19 +70,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           .eq("id", userId)
           .single();
         if (extra) {
-          extraData = {
+          setUser(prev => prev ? {
+            ...prev,
             email_verified: extra.email_verified ?? true,
-            is_active: extra.is_active ?? true,
-            is_minor: extra.is_minor ?? false,
+            is_active:      extra.is_active ?? true,
+            is_minor:       extra.is_minor ?? false,
             parental_consent_required: extra.parental_consent_required ?? false,
-            parental_consent_given: extra.parental_consent_given ?? true,
-          };
+            parental_consent_given:    extra.parental_consent_given ?? true,
+          } : null);
         }
       } catch {
-        // Extra columns don't exist yet - use defaults (schema not migrated)
+        // Extra columns don't exist yet — defaults already applied above
       }
-
-      setUser({ ...data, ...extraData });
     } catch (e) {
       console.error("Error loading user profile:", e);
       setUser(null);
@@ -100,7 +103,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event: any, session: any) => {
       setSession(session);
       if (session?.user) {
-        setLoading(true);
+        // Only set loading if we don't already have a user (avoid flash on profile refresh)
+        if (!user) setLoading(true);
         await fetchProfile(session.user.id);
         setLoading(false);
       } else {

@@ -13,8 +13,8 @@ export default function AuthGuard({ children }: AuthGuardProps) {
   const { user, loading, isEmailVerified, isAccountActive, needsParentalConsent } = useAuth();
   const router = useRouter();
 
-  // Show loading state
-  if (loading) {
+  // Show loading state only on first load (no user yet)
+  if (loading && !user) {
     return (
       <div style={{
         height: "100vh",
