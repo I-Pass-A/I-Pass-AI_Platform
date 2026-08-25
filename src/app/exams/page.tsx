@@ -368,6 +368,8 @@ export default function ExamsPage() {
 
   if (!user) return null;
 
+  console.log('[ExamsPage] rendering main layout, tab=', tab, 't=', performance.now());
+
   const subjects = getSubjectsForGrade(activeGrade);
   const isAO = isAfaanOromo(user);
 

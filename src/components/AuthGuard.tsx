@@ -13,6 +13,8 @@ export default function AuthGuard({ children }: AuthGuardProps) {
   const { user, loading, isEmailVerified, isAccountActive, needsParentalConsent } = useAuth();
   const router = useRouter();
 
+  console.log('[AuthGuard]', { loading, hasUser: !!user, isEmailVerified, isAccountActive, t: performance.now() });
+
   // Show loading state only on first load (no user yet)
   if (loading && !user) {
     return (
