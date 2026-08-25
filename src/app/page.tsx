@@ -20,6 +20,8 @@ export default function Home() {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [schoolName, setSchoolName] = useState("");
+  const [age, setAge] = useState("");
+  const [gender, setGender] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState("student");
@@ -135,6 +137,8 @@ export default function Home() {
               first_name: firstName.trim(),
               last_name: lastName.trim(),
               school_name: schoolName.trim(),
+              age: age ? parseInt(age) : null,
+              gender: gender || null,
               role: "student",
               grade,
               grade_taught: null,
@@ -181,6 +185,8 @@ export default function Home() {
         setFirstName("");
         setLastName("");
         setSchoolName("");
+        setAge("");
+        setGender("");
         setPassword("");
         setEmail("");
         setSubmitting(false);
@@ -542,6 +548,79 @@ export default function Home() {
                         />
                       </div>
                     </div>
+
+                    {/* Age & Gender */}
+                    <div style={{ display: "flex", gap: "0.75rem" }}>
+                      <div className="form-group" style={{ flex: 1 }}>
+                        <label className="form-label">{lang === "EN" ? "Age" : "Umrii"}</label>
+                        <select
+                          className="form-select"
+                          required
+                          value={age}
+                          onChange={(e) => setAge(e.target.value)}
+                          style={{ width: "100%" }}
+                        >
+                          <option value="">{lang === "EN" ? "Select age" : "Filadhu"}</option>
+                          {Array.from({ length: 14 }, (_, i) => i + 5).map(a => (
+                            <option key={a} value={String(a)}>{a}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="form-group" style={{ flex: 1 }}>
+                        <label className="form-label">{lang === "EN" ? "Gender" : "Saala"}</label>
+                        <select
+                          className="form-select"
+                          required
+                          value={gender}
+                          onChange={(e) => setGender(e.target.value)}
+                          style={{ width: "100%" }}
+                        >
+                          <option value="">{lang === "EN" ? "Select" : "Filadhu"}</option>
+                          <option value="male">{lang === "EN" ? "Male" : "Dhiira"}</option>
+                          <option value="female">{lang === "EN" ? "Female" : "Dhalaa"}</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* Parental consent notice for under-13 */}
+                    {age && parseInt(age) < 13 && (
+                      <div style={{
+                        padding: "0.875rem 1rem",
+                        borderRadius: "var(--radius-sm)",
+                        background: "rgba(245,158,11,0.08)",
+                        border: "1px solid rgba(245,158,11,0.25)",
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "0.5rem"
+                      }}>
+                        <p style={{ fontSize: "0.82rem", color: "var(--warning)", fontWeight: 600, margin: 0 }}>
+                          ⚠️ {lang === "EN" ? "Parental Consent Required" : "Hayyama Maatii Barbaachisa"}
+                        </p>
+                        <p style={{ fontSize: "0.78rem", color: "var(--text-secondary)", margin: 0, lineHeight: 1.5 }}>
+                          {lang === "EN"
+                            ? "Students under 13 require a parent or guardian to complete a consent form before accessing the platform."
+                            : "Barataan umrii 13 gadi ta'e abbaa/haadha ykn eegduu barbaachisa."}
+                        </p>
+                        <a
+                          href="/parental-consent"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "0.35rem",
+                            fontSize: "0.8rem",
+                            fontWeight: 700,
+                            color: "var(--warning)",
+                            textDecoration: "none",
+                            borderBottom: "1px solid rgba(245,158,11,0.4)",
+                            width: "fit-content"
+                          }}
+                        >
+                          {lang === "EN" ? "Open Parental Consent Form →" : "Foom Hayyama Maatii Bani →"}
+                        </a>
+                      </div>
+                    )}
                   </>
                 )}
 
