@@ -289,18 +289,19 @@ function TutorPageContent() {
       <div className="app-container">
         <Sidebar />
       
-        <main className="main-content" style={{ padding: 0, height: "100vh" }}>
+        <main className="main-content" style={{ height: "100vh" }}>
           <div style={{ display: "flex", height: "100%" }}>
         
-        {/* Chat History Panel (Mobile: Hidden by default, Desktop: Always visible) */}
-        <div className="glass-panel" style={{
+        {/* Chat History Panel - hidden on mobile, visible on desktop */}
+        <div className="glass-panel tutor-history-panel" style={{
           width: "280px",
           background: "var(--sidebar-bg)",
           borderRight: "1px solid var(--glass-border)",
           display: "flex",
           flexDirection: "column",
-          height: "100vh",
-          borderRadius: 0
+          height: "100%",
+          borderRadius: 0,
+          flexShrink: 0,
         }}>
           <div style={{
             padding: "1.5rem",

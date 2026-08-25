@@ -201,8 +201,6 @@ export default function Sidebar() {
           alignItems: "center",
           justifyContent: "center",
           cursor: "pointer",
-          // Hide on desktop (≥768px), show on mobile
-          visibility: "visible",
         }}
         className="sidebar-hamburger"
       >
@@ -227,28 +225,6 @@ export default function Sidebar() {
 
       {/* ── Desktop spacer (pushes main content right) ── */}
       <div className="sidebar-spacer" style={{ width: "260px", flexShrink: 0 }} />
-
-      {/* ── Responsive CSS ── */}
-      <style jsx global>{`
-        /* DESKTOP (≥768px): sidebar always visible, hamburger hidden */
-        @media (min-width: 768px) {
-          .sidebar-hamburger { display: none !important; }
-          .sidebar-backdrop  { display: none !important; }
-          #app-sidebar { transform: translateX(0) !important; }
-        }
-
-        /* MOBILE (<768px): sidebar hidden by default, spacer removed */
-        @media (max-width: 767px) {
-          .sidebar-spacer { display: none !important; }
-          #app-sidebar {
-            transform: translateX(-100%);
-          }
-          .main-content {
-            padding: 1rem !important;
-            padding-top: 4rem !important;
-          }
-        }
-      `}</style>
     </>
   );
 }

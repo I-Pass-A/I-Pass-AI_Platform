@@ -173,7 +173,7 @@ h1, h2, h3, h4, h5, h6 {
 .btn-primary:hover {
   transform: translateY(-1px);
   box-shadow: 0 6px 20px 0 rgba(14, 165, 233, 0.4);
-  background: linear-gradient(135deg, var(--primary-hover) 0%, var(--primary) 100__);
+  background: linear-gradient(135deg, var(--primary-hover) 0%, var(--primary) 100%);
 }
 
 .btn-secondary {
@@ -231,4 +231,27 @@ h1, h2, h3, h4, h5, h6 {
 
 .animate-fade-in {
   animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Tutor page — chat history panel hidden on mobile */
+@media (max-width: 767px) {
+  .tutor-history-panel {
+    display: none !important;
+  }
+}
+
+/* Mobile sidebar responsive */
+@media (min-width: 768px) {
+  .sidebar-hamburger { display: none !important; }
+  .sidebar-backdrop  { display: none !important; }
+  #app-sidebar       { transform: translateX(0) !important; }
+}
+
+@media (max-width: 767px) {
+  .sidebar-spacer { display: none !important; }
+  #app-sidebar    { transform: translateX(-100%); }
+  .main-content   {
+    padding: 1rem !important;
+    padding-top: 4rem !important;
+  }
 }
