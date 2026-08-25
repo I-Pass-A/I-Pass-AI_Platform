@@ -712,15 +712,21 @@ export default function ExamsPage() {
         </div>
 
         {/* Tab bar */}
-        <div className="exam-tabs-bar" style={{ 
+        <div className="exam-tabs-bar" style={{
           display: "flex",
           gap: "0",
-          marginBottom: "1.5rem", 
+          marginBottom: "1.5rem",
           borderBottom: "1px solid var(--glass-border)",
           overflowX: "auto",
           scrollbarWidth: "none",
           msOverflowStyle: "none",
-          WebkitOverflowScrolling: "touch"
+          WebkitOverflowScrolling: "touch",
+          position: "sticky",
+          top: 0,
+          zIndex: 10,
+          background: "var(--sidebar-bg)",
+          backdropFilter: "blur(12px)",
+          WebkitBackdropFilter: "blur(12px)",
         }}>
           {tabs.map((t) => (
             <button
