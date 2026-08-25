@@ -712,10 +712,10 @@ export default function ExamsPage() {
         </div>
 
         {/* Tab bar */}
-        <div className="no-print" style={{ 
+        <div className="no-print exam-tabs-bar" style={{ 
           display: "flex",
-          gap: "0.25rem",
-          marginBottom: "2rem", 
+          gap: "0",
+          marginBottom: "1.5rem", 
           borderBottom: "1px solid var(--glass-border)",
           overflowX: "auto",
           scrollbarWidth: "none",
@@ -729,11 +729,11 @@ export default function ExamsPage() {
               style={{
                 display: "flex",
                 alignItems: "center",
-                gap: "0.5rem",
-                padding: "0.75rem 1.25rem",
-                fontSize: "0.875rem",
+                gap: "0.35rem",
+                padding: "0.7rem 0.85rem",
+                fontSize: "0.82rem",
                 fontWeight: tab === t.id ? 600 : 400,
-                background: "transparent",
+                background: tab === t.id ? "rgba(14,165,233,0.08)" : "transparent",
                 border: "none",
                 cursor: "pointer",
                 color: tab === t.id ? "var(--primary)" : "var(--text-secondary)",
@@ -742,6 +742,10 @@ export default function ExamsPage() {
                 transition: "all 0.15s",
                 whiteSpace: "nowrap",
                 flexShrink: 0,
+                flex: 1,
+                justifyContent: "center",
+                borderRadius: "8px 8px 0 0",
+              }}
                 borderRadius: "8px 8px 0 0"
               }}
             >
