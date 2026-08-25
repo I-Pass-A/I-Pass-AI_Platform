@@ -746,8 +746,6 @@ export default function ExamsPage() {
                 justifyContent: "center",
                 borderRadius: "8px 8px 0 0",
               }}
-                borderRadius: "8px 8px 0 0"
-              }}
             >
               {t.icon} {t.label}
             </button>
