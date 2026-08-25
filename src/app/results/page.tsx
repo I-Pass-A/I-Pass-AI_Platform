@@ -116,7 +116,7 @@ export default function ResultsPage() {
     }
   };
 
-  if (loading || !user) return null;
+  if (!user) return null;
 
   const isAO = isAfaanOromo(user);
 

@@ -146,7 +146,7 @@ export default function DashboardPage() {
     }
   };
 
-  if (loading || !user) return null;
+  if (!user) return null;
 
   const isAO = isAfaanOromo(user);
   const activeGrade = user.role === "teacher"

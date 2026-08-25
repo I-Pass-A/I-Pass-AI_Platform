@@ -366,7 +366,7 @@ export default function ExamsPage() {
   useEffect(() => { if (!loading && !user) router.push("/"); }, [user, loading, router]);
   useEffect(() => { if (user) { fetchSavedExams(); fetchAssignments(); } }, [user?.id]);
 
-  if (loading || !user) return null;
+  if (!user) return null;
 
   const subjects = getSubjectsForGrade(activeGrade);
   const isAO = isAfaanOromo(user);

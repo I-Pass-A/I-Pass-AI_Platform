@@ -94,7 +94,7 @@ function TutorPageContent() {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  if (loading || !user) return null;
+  if (!user) return null;
 
   // Determine subject list: teachers use their grade_taught, students use their grade
   const activeGrade = user.role === "teacher" ? (user.grade_taught ?? user.grade) : user.grade;
