@@ -261,3 +261,24 @@ h1, h2, h3, h4, h5, h6 {
     padding-top: 4rem !important;
   }
 }
+
+/* Print styles — hide UI chrome when printing exams */
+@media print {
+  .no-print,
+  .exam-tabs-bar,
+  .sidebar-hamburger,
+  #app-sidebar,
+  .sidebar-spacer {
+    display: none !important;
+  }
+  .main-content {
+    padding: 0 !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+  .glass-panel {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+}

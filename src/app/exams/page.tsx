@@ -695,7 +695,7 @@ export default function ExamsPage() {
         {/* Print styles - no hidden class overrides */}
 
         {/* Page header */}
-        <div className="no-print" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1.75rem" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1.75rem" }}>
           <div>
             <h1 style={{ fontSize: "2rem", fontWeight: 700, marginBottom: "0.25rem" }}>
               {isAO ? "Wiirtuu Qophii Qormaataa" : "Exam Centre"}
@@ -712,7 +712,7 @@ export default function ExamsPage() {
         </div>
 
         {/* Tab bar */}
-        <div className="no-print exam-tabs-bar" style={{ 
+        <div className="exam-tabs-bar" style={{ 
           display: "flex",
           gap: "0",
           marginBottom: "1.5rem", 
