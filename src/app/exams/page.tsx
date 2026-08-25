@@ -806,6 +806,14 @@ export default function ExamsPage() {
         {/* ── TAB: AI GENERATOR ───────────────────────────────────────────── */}
         {tab === "generator" && !generatedExam && (
           <div className="animate-fade-in" style={{ display: "grid", gridTemplateColumns: "1fr", gap: "2rem" }}>
+            {/* Back button — mobile prominent */}
+            <button
+              onClick={() => { setTab("my-exams"); setSubject(""); setTopic(""); setGenerateError(""); setDifficulty("medium"); setQuestionCount(10); setExamTypes(["multiple_choice"]); }}
+              className="btn btn-outline"
+              style={{ width: "fit-content", display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.875rem" }}
+            >
+              ← {isAO ? "Gara Qormaata Duubatti" : "Back to My Exams"}
+            </button>
             {/* Mobile-first: Stack form and info vertically */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
               <div className="glass-panel" style={{ padding: "2rem" }}>
@@ -870,7 +878,19 @@ export default function ExamsPage() {
                     </div>
                   </div>
                   <button type="submit" className="btn btn-primary" disabled={generating || !subject || !topic || examTypes.length === 0} style={{ width: "100%" }}>
-                    {generating ? (isAO ? "Uumamaa jira..." : "Generating...") : (isAO ? "Qormaata Uumi" : "Generate Exam")}
+                    {generating
+                      ? <><span style={{ display: "inline-block", width: "14px", height: "14px", border: "2px solid rgba(255,255,255,0.3)", borderTopColor: "#fff", borderRadius: "50%", animation: "spin 0.8s linear infinite", marginRight: "0.5rem" }} />{isAO ? "Uumamaa jira..." : "Generating..."}</>
+                      : (isAO ? "Qormaata Uumi" : "Generate Exam")}
+                  </button>
+                  {/* Cancel button */}
+                  <button
+                    type="button"
+                    onClick={() => { setTab("my-exams"); setSubject(""); setTopic(""); setGenerateError(""); setDifficulty("medium"); setQuestionCount(10); setExamTypes(["multiple_choice"]); }}
+                    className="btn btn-outline"
+                    style={{ width: "100%", marginTop: "0.75rem" }}
+                    disabled={generating}
+                  >
+                    {isAO ? "Haqi / Duubatti" : "Cancel & Go Back"}
                   </button>
                   {generateError && (
                     <div style={{ marginTop: "1rem", padding: "0.75rem 1rem", borderRadius: "var(--radius-sm)", background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", color: "var(--danger)", fontSize: "0.85rem" }}>
