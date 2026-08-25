@@ -38,6 +38,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<Profile | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const hasUserRef = React.useRef(false);
+
+  // Keep ref in sync with state
+  React.useEffect(() => { hasUserRef.current = !!user; }, [user]);
 
   const fetchProfile = async (userId: string) => {
     try {
@@ -101,10 +105,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // Listen to session changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event: any, session: any) => {
+      console.log('[AuthContext] onAuthStateChange event=', _event, 'hasUser=', hasUserRef.current, 't=', performance.now());
       setSession(session);
       if (session?.user) {
-        // Only set loading if we don't already have a user (avoid flash on profile refresh)
-        if (!user) setLoading(true);
+        // Use ref (not state) to check if user exists — avoids stale closure bug
+        if (!hasUserRef.current) setLoading(true);
         await fetchProfile(session.user.id);
         setLoading(false);
       } else {
