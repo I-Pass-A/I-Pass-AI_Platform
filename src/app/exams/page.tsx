@@ -559,7 +559,7 @@ export default function ExamsPage() {
     return (
       <AuthGuard>
         <div className="app-container"><Sidebar />
-          <main className="main-content" style={{ display: "flex", flexDirection: "column" }}>
+          <main className="main-content exam-main">
             <ExamTaker exam={takingExam} isAO={isAO} session={session} onClose={() => setTakingExam(null)} />
           </main>
         </div>
@@ -572,7 +572,7 @@ export default function ExamsPage() {
     return (
       <AuthGuard>
         <div className="app-container"><Sidebar />
-          <main className="main-content" style={{ display: "flex", flexDirection: "column" }}>
+          <main className="main-content exam-main">
             <div style={{ marginBottom: "1rem" }}>
               <span style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>
                 {typeLabel(asgn.assignment_type)} — {isAO ? "Xumura" : "Due"}: {new Date(asgn.due_date).toLocaleDateString()}
@@ -690,7 +690,7 @@ export default function ExamsPage() {
     <AuthGuard>
       <div className="app-container">
         <Sidebar />
-        <main className="main-content" style={{ display: "flex", flexDirection: "column" }}>
+        <main className="main-content exam-main">
 
         {/* Print styles - no hidden class overrides */}
 
@@ -712,7 +712,7 @@ export default function ExamsPage() {
         </div>
 
         {/* Tab bar */}
-        <div className="exam-tabs-bar" style={{
+        <div className="exam-tabs-bar exam-tabs-fixed" style={{
           display: "flex",
           gap: "0",
           marginBottom: "1.5rem",
