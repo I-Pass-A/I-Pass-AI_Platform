@@ -11,6 +11,53 @@ function ConfirmContent() {
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
   const [message, setMessage] = useState('');
   const [debugInfo, setDebugInfo] = useState('');
+  const [resendEmail, setResendEmail] = useState('');
+  const [resending, setResending] = useState(false);
+  const [resendMsg, setResendMsg] = useState('');
+
+  const handleResend = async () => {
+    if (!resendEmail) { setResendMsg('Enter your email first'); return; }
+    setResending(true);
+    setResendMsg('');
+    try {
+      const { error } = await supabase.auth.resend({ type: 'signup', email: resendEmail });
+      if (error) setResendMsg('Failed: ' + error.message);
+      else setResendMsg('✅ New confirmation email sent! Check your inbox.');
+    } catch (e: any) {
+      setResendMsg('Error: ' + e.message);
+    } finally {
+      setResending(false);
+    }
+  };
+
+  const ResendButton = () => (
+    <div style={{ width: "100%", marginBottom: "0.5rem" }}>
+      <p style={{ fontSize: "0.82rem", color: "var(--text-secondary)", marginBottom: "0.75rem" }}>
+        Enter your email to get a new confirmation link:
+      </p>
+      <input
+        type="email"
+        className="form-input"
+        placeholder="your@email.com"
+        value={resendEmail}
+        onChange={e => setResendEmail(e.target.value)}
+        style={{ width: "100%", marginBottom: "0.5rem" }}
+      />
+      <button
+        onClick={handleResend}
+        disabled={resending}
+        className="btn btn-primary"
+        style={{ width: "100%" }}
+      >
+        {resending ? 'Sending...' : '📧 Resend Confirmation Email'}
+      </button>
+      {resendMsg && (
+        <p style={{ fontSize: "0.82rem", marginTop: "0.5rem", color: resendMsg.startsWith('✅') ? "var(--success)" : "var(--danger)" }}>
+          {resendMsg}
+        </p>
+      )}
+    </div>
+  );
 
   useEffect(() => {
     const handleEmailConfirmation = async () => {
@@ -191,8 +238,9 @@ function ConfirmContent() {
             </div>
             <h2 style={{ fontSize: "1.5rem", fontWeight: 700, marginBottom: "0.75rem" }}>Confirmation Failed</h2>
             <p style={{ color: "var(--text-secondary)", marginBottom: "1rem" }}>{message}</p>
-            {debugInfo && <p style={{ fontSize: "0.7rem", color: "var(--text-muted)", marginBottom: "1.5rem", fontFamily: "monospace" }}>{debugInfo}</p>}
-            <button onClick={() => router.push("/")} className="btn btn-primary">Back to Login</button>
+            {debugInfo && <p style={{ fontSize: "0.7rem", color: "var(--text-muted)", marginBottom: "1.5rem", fontFamily: "monospace", wordBreak: "break-all" }}>{debugInfo}</p>}
+            <ResendButton />
+            <button onClick={() => router.push("/")} className="btn btn-outline" style={{ width: "100%", marginTop: "0.75rem" }}>Back to Login</button>
           </>
         )}
 
