@@ -238,7 +238,6 @@ function ConfirmContent() {
             </div>
             <h2 style={{ fontSize: "1.5rem", fontWeight: 700, marginBottom: "0.75rem" }}>Confirmation Failed</h2>
             <p style={{ color: "var(--text-secondary)", marginBottom: "1rem" }}>{message}</p>
-            {debugInfo && <p style={{ fontSize: "0.7rem", color: "var(--text-muted)", marginBottom: "1.5rem", fontFamily: "monospace", wordBreak: "break-all" }}>{debugInfo}</p>}
             <ResendButton />
             <button onClick={() => router.push("/")} className="btn btn-outline" style={{ width: "100%", marginTop: "0.75rem" }}>Back to Login</button>
           </>
