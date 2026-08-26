@@ -1,44 +1,12 @@
 ﻿"use client";
 
-import React, { useState } from "react";
+import React from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { Mail, UserX } from "lucide-react";
-import { supabase } from "@/lib/supabase";
 
 interface AuthGuardProps {
   children: React.ReactNode;
-}
-
-function ResendVerification() {
-  const [email, setEmail] = useState('');
-  const [sending, setSending] = useState(false);
-  const [msg, setMsg] = useState('');
-
-  const send = async () => {
-    if (!email) { setMsg('Enter your email'); return; }
-    setSending(true);
-    try {
-      const { error } = await supabase.auth.resend({ type: 'signup', email });
-      setMsg(error ? 'Failed: ' + error.message : '✅ New link sent! Check your inbox.');
-    } catch (e: any) { setMsg('Error: ' + e.message); }
-    finally { setSending(false); }
-  };
-
-  return (
-    <div style={{ marginBottom: "1rem" }}>
-      <p style={{ fontSize: "0.82rem", color: "var(--text-secondary)", marginBottom: "0.5rem" }}>
-        Resend confirmation email:
-      </p>
-      <input type="email" className="form-input" placeholder="your@email.com"
-        value={email} onChange={e => setEmail(e.target.value)}
-        style={{ width: "100%", marginBottom: "0.5rem" }} />
-      <button onClick={send} disabled={sending} className="btn btn-primary" style={{ width: "100%" }}>
-        {sending ? 'Sending...' : '📧 Resend Confirmation Email'}
-      </button>
-      {msg && <p style={{ fontSize: "0.82rem", marginTop: "0.5rem", color: msg.startsWith('✅') ? "var(--success)" : "var(--danger)" }}>{msg}</p>}
-    </div>
-  );
 }
 
 export default function AuthGuard({ children }: AuthGuardProps) {
@@ -80,13 +48,25 @@ export default function AuthGuard({ children }: AuthGuardProps) {
     return null;
   }
 
-  // Email not verified - show verification prompt
+  // Email not verified - show simple prompt
   if (!isEmailVerified) {
     return (
-      <div style={{
-        minHeight: "100vh", display: "flex", alignItems: "center",
-        justifyContent: "center", padding: "2rem", background: "var(--bg-gradient)"
-      }}>
+      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: "2rem", background: "var(--bg-gradient)" }}>
+        <div className="glass-panel" style={{ maxWidth: "480px", padding: "3rem 2rem", textAlign: "center" }}>
+          <div style={{ width: "72px", height: "72px", margin: "0 auto 1.5rem", borderRadius: "50%", background: "rgba(245,158,11,0.1)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <Mail size={32} style={{ color: "var(--warning)" }} />
+          </div>
+          <h2 style={{ fontSize: "1.5rem", fontWeight: 700, marginBottom: "0.75rem" }}>Check Your Email</h2>
+          <p style={{ color: "var(--text-secondary)", fontSize: "0.95rem", lineHeight: 1.6, marginBottom: "2rem" }}>
+            We sent a confirmation link to your email. Click it to activate your account, then come back and sign in.
+          </p>
+          <button onClick={() => router.push("/")} className="btn btn-outline" style={{ width: "100%" }}>
+            Back to Login
+          </button>
+        </div>
+      </div>
+    );
+  }}>
         <div className="glass-panel" style={{ maxWidth: "500px", padding: "3rem 2rem", textAlign: "center" }}>
           <div style={{ width: "80px", height: "80px", margin: "0 auto 1.5rem", borderRadius: "50%", background: "rgba(245,158,11,0.1)", display: "flex", alignItems: "center", justifyContent: "center" }}>
             <Mail size={36} style={{ color: "var(--warning)" }} />
@@ -94,9 +74,7 @@ export default function AuthGuard({ children }: AuthGuardProps) {
           <h2 style={{ fontSize: "1.5rem", fontWeight: 700, marginBottom: "0.75rem" }}>Verify Your Email</h2>
           <p style={{ color: "var(--text-secondary)", fontSize: "1rem", lineHeight: 1.6, marginBottom: "1.5rem" }}>
             We sent a verification link to your email address. Click it to activate your account.
-          </p>
-          <ResendVerification />
-          <button onClick={() => router.push("/")} className="btn btn-outline" style={{ width: "100%", marginTop: "0.75rem" }}>
+          </p>          <button onClick={() => router.push("/")} className="btn btn-outline" style={{ width: "100%", marginTop: "0.75rem" }}>
             Back to Login
           </button>
         </div>
