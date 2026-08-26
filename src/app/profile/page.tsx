@@ -10,7 +10,7 @@ import { isAfaanOromo } from "@/lib/subjects";
 import { User, Mail, GraduationCap, Globe, School, Camera, Save, ArrowLeft } from "lucide-react";
 
 export default function ProfilePage() {
-  const { user, loading, refreshProfile } = useAuth();
+  const { user, loading, session } = useAuth();
   const router = useRouter();
 
   const [saving, setSaving] = useState(false);
@@ -24,6 +24,11 @@ export default function ProfilePage() {
 
   const isAO = isAfaanOromo(user);
   const meta = (user as any);
+  const sessionMeta = (session as any)?.user?.user_metadata || {};
+  const email = session?.user?.email ?? sessionMeta.email ?? "—";
+  const schoolName = meta.school_name ?? sessionMeta.school_name ?? "—";
+  const userAge = meta.age ?? sessionMeta.age ?? null;
+  const userGender = meta.gender ?? sessionMeta.gender ?? null;
 
   const activeGrade = user.role === "teacher"
     ? (user.grade_taught ?? user.grade)
@@ -63,13 +68,13 @@ export default function ProfilePage() {
 
   const infoRows = [
     { icon: <User size={16} />,          label: isAO ? "Maqaa Guutuu"       : "Full Name",       value: user.name },
-    { icon: <Mail size={16} />,          label: isAO ? "Email"               : "Email",           value: meta.email ?? "—" },
-    { icon: <School size={16} />,        label: isAO ? "Mana Barumsaa"       : "School",          value: meta.school_name ?? "—" },
+    { icon: <Mail size={16} />,          label: isAO ? "Email"               : "Email",           value: email },
+    { icon: <School size={16} />,        label: isAO ? "Mana Barumsaa"       : "School",          value: schoolName },
     { icon: <GraduationCap size={16} />, label: isAO ? "Kutaa"               : "Grade",           value: activeGrade ? `Grade ${activeGrade}` : "—" },
     { icon: <Globe size={16} />,         label: isAO ? "Afaan Barumsa"       : "Language",        value: user.language },
     { icon: <User size={16} />,          label: isAO ? "Gita"                : "Role",            value: roleLabel },
-    ...(meta.age    ? [{ icon: <User size={16} />, label: isAO ? "Umrii" : "Age",    value: String(meta.age) }] : []),
-    ...(meta.gender ? [{ icon: <User size={16} />, label: isAO ? "Saala" : "Gender", value: meta.gender === "male" ? (isAO ? "Dhiira" : "Male") : (isAO ? "Dhalaa" : "Female") }] : []),
+    ...(userAge    ? [{ icon: <User size={16} />, label: isAO ? "Umrii" : "Age",    value: String(userAge) }] : []),
+    ...(userGender ? [{ icon: <User size={16} />, label: isAO ? "Saala" : "Gender", value: userGender === "male" ? (isAO ? "Dhiira" : "Male") : (isAO ? "Dhalaa" : "Female") }] : []),
   ];
 
   return (

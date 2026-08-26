@@ -10,59 +10,105 @@ function ConfirmContent() {
   const searchParams = useSearchParams();
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
   const [message, setMessage] = useState('');
+  const [debugInfo, setDebugInfo] = useState('');
 
   useEffect(() => {
     const handleEmailConfirmation = async () => {
       try {
+        // Get all possible params
         const token_hash = searchParams.get('token_hash');
-        const type = searchParams.get('type');
-        const code = searchParams.get('code');
+        const type       = searchParams.get('type');
+        const code       = searchParams.get('code');
+
+        // Also check URL hash fragment (Supabase sometimes uses #access_token=...&type=...)
+        const hash = typeof window !== 'undefined' ? window.location.hash : '';
+        const hashParams = new URLSearchParams(hash.replace('#', ''));
+        const hashAccessToken  = hashParams.get('access_token');
+        const hashRefreshToken = hashParams.get('refresh_token');
+        const hashType         = hashParams.get('type');
+
+        const debug = `token_hash:${!!token_hash} code:${!!code} hash:${!!hash} hashToken:${!!hashAccessToken} type:${type || hashType}`;
+        setDebugInfo(debug);
+        console.log('[Confirm]', debug, 'fullURL:', typeof window !== 'undefined' ? window.location.href : '');
 
         let verifyError: any = null;
         let userId: string | null = null;
+        let confirmed = false;
 
-        if (code) {
-          // PKCE flow
-          const { data, error } = await supabase.auth.exchangeCodeForSession(code);
-          verifyError = error;
-          userId = data?.user?.id ?? null;
-        } else if (token_hash) {
-          // OTP flow — accepts signup, email, recovery etc
-          const { data, error } = await supabase.auth.verifyOtp({
-            token_hash,
-            type: (type as any) || 'email',
+        if (hashAccessToken && hashRefreshToken) {
+          // Hash fragment flow — set session directly
+          const { data, error } = await supabase.auth.setSession({
+            access_token: hashAccessToken,
+            refresh_token: hashRefreshToken,
           });
           verifyError = error;
           userId = data?.user?.id ?? null;
+          confirmed = !error && !!data?.user;
+
+        } else if (code) {
+          // PKCE code flow
+          const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+          verifyError = error;
+          userId = data?.user?.id ?? null;
+          confirmed = !error && !!data?.user;
+
+        } else if (token_hash) {
+          // OTP token_hash flow — try both 'signup' and 'email' types
+          const otpType = type === 'signup' ? 'signup' : 'email';
+          const { data, error } = await supabase.auth.verifyOtp({
+            token_hash,
+            type: otpType as any,
+          });
+          verifyError = error;
+          userId = data?.user?.id ?? null;
+          confirmed = !error && !!data?.user;
+
+          // If first attempt failed, try other type
+          if (verifyError) {
+            const altType = otpType === 'signup' ? 'email' : 'signup';
+            const { data: d2, error: e2 } = await supabase.auth.verifyOtp({
+              token_hash,
+              type: altType as any,
+            });
+            if (!e2 && d2?.user) {
+              verifyError = null;
+              userId = d2.user.id;
+              confirmed = true;
+            }
+          }
+
         } else {
-          setStatus('error');
-          setMessage('Invalid confirmation link. Please sign up again.');
-          return;
+          // No params — maybe user already confirmed, check session
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session?.user) {
+            userId = session.user.id;
+            confirmed = true;
+          } else {
+            setStatus('error');
+            setMessage('Invalid confirmation link. Please sign up again to get a new link.');
+            return;
+          }
         }
 
-        if (verifyError) {
-          console.error('Confirm error:', verifyError.message);
+        if (verifyError && !confirmed) {
+          console.error('[Confirm] error:', verifyError);
           setStatus('error');
           setMessage(
-            verifyError.message?.toLowerCase().includes('expired')
-              ? 'This link has expired. Please sign up again to get a new link.'
+            verifyError.message?.toLowerCase().includes('expired') || verifyError.message?.toLowerCase().includes('invalid')
+              ? 'This confirmation link has expired. Please sign up again to get a new one.'
               : 'Confirmation failed: ' + verifyError.message
           );
           return;
         }
-
-        // Profile update handled server-side by trigger
-        // Don't update email_verified from client — RLS blocks it
-        // The trigger on auth.users handles this automatically
 
         setStatus('success');
         setMessage('Your email is confirmed! Redirecting to your dashboard...');
         setTimeout(() => router.push('/dashboard'), 2500);
 
       } catch (err: any) {
-        console.error('Confirm exception:', err);
+        console.error('[Confirm] exception:', err);
         setStatus('error');
-        setMessage('An unexpected error occurred. Please try again.');
+        setMessage('An unexpected error occurred: ' + err.message);
       }
     };
 
@@ -102,7 +148,8 @@ function ConfirmContent() {
               <AlertCircle size={36} style={{ color: "var(--danger)" }} />
             </div>
             <h2 style={{ fontSize: "1.5rem", fontWeight: 700, marginBottom: "0.75rem" }}>Confirmation Failed</h2>
-            <p style={{ color: "var(--text-secondary)", marginBottom: "2rem" }}>{message}</p>
+            <p style={{ color: "var(--text-secondary)", marginBottom: "1rem" }}>{message}</p>
+            {debugInfo && <p style={{ fontSize: "0.7rem", color: "var(--text-muted)", marginBottom: "1.5rem", fontFamily: "monospace" }}>{debugInfo}</p>}
             <button onClick={() => router.push("/")} className="btn btn-primary">Back to Login</button>
           </>
         )}
