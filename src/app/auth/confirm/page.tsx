@@ -26,10 +26,19 @@ function ConfirmContent() {
         const hashAccessToken  = hashParams.get('access_token');
         const hashRefreshToken = hashParams.get('refresh_token');
         const hashType         = hashParams.get('type');
+        const hashError        = hashParams.get('error');
+        const hashErrorDesc    = hashParams.get('error_description');
 
-        const debug = `token_hash:${!!token_hash} code:${!!code} hash:${!!hash} hashToken:${!!hashAccessToken} type:${type || hashType}`;
+        const debug = `token_hash:${!!token_hash} code:${!!code} hash:${!!hash} hashToken:${!!hashAccessToken} type:${type || hashType} hashError:${hashError || 'none'} rawHash:${hash.slice(0,80)}`;
         setDebugInfo(debug);
         console.log('[Confirm]', debug, 'fullURL:', typeof window !== 'undefined' ? window.location.href : '');
+
+        // If hash contains an error, show it immediately
+        if (hashError) {
+          setStatus('error');
+          setMessage(hashErrorDesc || `Error: ${hashError}. Please sign up again.`);
+          return;
+        }
 
         let verifyError: any = null;
         let userId: string | null = null;
