@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
@@ -105,7 +105,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // Listen to session changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event: any, session: any) => {
-      console.log('[AuthContext] onAuthStateChange event=', _event, 'hasUser=', hasUserRef.current, 't=', performance.now());
       setSession(session);
       if (session?.user) {
         // Use ref (not state) to check if user exists — avoids stale closure bug

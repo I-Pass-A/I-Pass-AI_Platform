@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap');
+﻿@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap');
 :root {
   /* Premium Smart City Palette: Teals, Blues, & Dark Mode Gradients */
   --bg-gradient: linear-gradient(135deg, #060b19 0%, #0a142c 50%, #030712 100%);
@@ -235,13 +235,7 @@ h1, h2, h3, h4, h5, h6 {
   .tutor-history-panel {
     display: none !important;
   }
-  /* Exam centre tabs — compact on mobile */
-  .exam-tabs-bar button {
-    padding: 0.6rem 0.5rem !important;
-    font-size: 0.75rem !important;
-    gap: 0.2rem !important;
   }
-}
 
 /* Mobile sidebar responsive */
 @media (min-width: 768px) {
@@ -262,12 +256,7 @@ h1, h2, h3, h4, h5, h6 {
 /* Print styles — hide UI chrome when printing exams */
 @media print {
   .no-print,
-  .exam-tabs-bar,
-  .sidebar-hamburger,
-  #app-sidebar,
-  .sidebar-spacer {
-    display: none !important;
-  }
+  
   .main-content {
     padding: 0 !important;
     height: auto !important;
@@ -280,39 +269,7 @@ h1, h2, h3, h4, h5, h6 {
   }
 }
 
-/* Exam Centre — tab bar always visible */
-.exam-main {
-  display: flex;
-  flex-direction: column;
-  padding: 2.5rem;
-}
 
-.exam-tabs-fixed {
-  display: flex !important;
-  visibility: visible !important;
-  opacity: 1 !important;
-  position: sticky;
-  top: 0;
-  z-index: 20;
-  background: var(--sidebar-bg) !important;
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border-bottom: 2px solid var(--glass-border) !important;
-  margin-bottom: 1.5rem !important;
-}
 
 @media (max-width: 767px) {
-  .exam-main {
-    padding: 1rem;
-    padding-top: 4rem;
-  }
-  .exam-tabs-fixed {
-            }
-  .exam-tabs-fixed button {
-    flex: 1;
-    padding: 0.75rem 0.25rem !important;
-    font-size: 0.72rem !important;
-    gap: 0.2rem !important;
-    justify-content: center;
-  }
 }

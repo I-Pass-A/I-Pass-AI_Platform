@@ -368,8 +368,6 @@ export default function ExamsPage() {
 
   if (!user) return null;
 
-  console.log('[ExamsPage] rendering main layout, tab=', tab, 'takingExam=', !!takingExam, 'takingAssignment=', !!takingAssignment, 'gradingAssignment=', !!gradingAssignment, 't=', performance.now());
-
   const subjects = getSubjectsForGrade(activeGrade);
   const isAO = isAfaanOromo(user);
 
@@ -561,7 +559,7 @@ export default function ExamsPage() {
     return (
       <AuthGuard>
         <div className="app-container"><Sidebar />
-          <main className="main-content exam-main">
+          <main className="main-content" style={{ display: "flex", flexDirection: "column" }}>
             <ExamTaker exam={takingExam} isAO={isAO} session={session} onClose={() => setTakingExam(null)} />
           </main>
         </div>
@@ -574,7 +572,7 @@ export default function ExamsPage() {
     return (
       <AuthGuard>
         <div className="app-container"><Sidebar />
-          <main className="main-content exam-main">
+          <main className="main-content" style={{ display: "flex", flexDirection: "column" }}>
             <div style={{ marginBottom: "1rem" }}>
               <span style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>
                 {typeLabel(asgn.assignment_type)} — {isAO ? "Xumura" : "Due"}: {new Date(asgn.due_date).toLocaleDateString()}
@@ -692,7 +690,7 @@ export default function ExamsPage() {
     <AuthGuard>
       <div className="app-container">
         <Sidebar />
-        <main className="main-content exam-main">
+        <main className="main-content" style={{ display: "flex", flexDirection: "column" }}>
 
         {/* Print styles - no hidden class overrides */}
 
@@ -714,7 +712,7 @@ export default function ExamsPage() {
         </div>
 
         {/* Tab bar */}
-        <div className="exam-tabs-bar exam-tabs-fixed" style={{
+        <div  style={{
           display: "flex",
           gap: "0",
           marginBottom: "1.5rem",
