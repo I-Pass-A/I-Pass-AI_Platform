@@ -16,41 +16,55 @@ function ConfirmContent() {
       try {
         const token_hash = searchParams.get('token_hash');
         const type = searchParams.get('type');
+        const code = searchParams.get('code');
 
-        if (!token_hash || type !== 'email') {
+        let verifyError: any = null;
+        let userId: string | null = null;
+
+        if (code) {
+          // PKCE flow
+          const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+          verifyError = error;
+          userId = data?.user?.id ?? null;
+        } else if (token_hash) {
+          // OTP flow — accepts signup, email, recovery etc
+          const { data, error } = await supabase.auth.verifyOtp({
+            token_hash,
+            type: (type as any) || 'email',
+          });
+          verifyError = error;
+          userId = data?.user?.id ?? null;
+        } else {
           setStatus('error');
-          setMessage('Invalid confirmation link. Please try signing up again.');
+          setMessage('Invalid confirmation link. Please sign up again.');
           return;
         }
 
-        const { data, error } = await supabase.auth.verifyOtp({
-          token_hash,
-          type: 'email'
-        });
-
-        if (error) {
+        if (verifyError) {
+          console.error('Confirm error:', verifyError.message);
           setStatus('error');
-          setMessage('Failed to confirm email. The link may have expired. Please try signing up again.');
+          setMessage(
+            verifyError.message?.toLowerCase().includes('expired')
+              ? 'This link has expired. Please sign up again to get a new link.'
+              : 'Confirmation failed: ' + verifyError.message
+          );
           return;
         }
 
-        if (data.user) {
-          // Update profile to mark email as verified
+        // Update profile
+        if (userId) {
           await supabase
             .from('profiles')
-            .update({ email_verified: true })
-            .eq('id', data.user.id);
-
-          setStatus('success');
-          setMessage('Email confirmed successfully! Redirecting to your dashboard...');
-
-          // Redirect after 3 seconds
-          setTimeout(() => {
-            router.push('/tutor');
-          }, 3000);
+            .update({ email_verified: true, is_active: true })
+            .eq('id', userId);
         }
-      } catch (err) {
-        console.error('Email confirmation error:', err);
+
+        setStatus('success');
+        setMessage('Your email is confirmed! Redirecting to your dashboard...');
+        setTimeout(() => router.push('/dashboard'), 2500);
+
+      } catch (err: any) {
+        console.error('Confirm exception:', err);
         setStatus('error');
         setMessage('An unexpected error occurred. Please try again.');
       }
@@ -61,143 +75,43 @@ function ConfirmContent() {
 
   return (
     <div style={{
-      minHeight: "100vh",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      padding: "2rem",
-      background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
+      minHeight: "100vh", display: "flex", alignItems: "center",
+      justifyContent: "center", padding: "2rem", background: "var(--bg-gradient)"
     }}>
-      <div className="glass-panel" style={{
-        maxWidth: "500px",
-        padding: "3rem 2rem",
-        textAlign: "center"
-      }}>
+      <div className="glass-panel" style={{ maxWidth: "500px", width: "100%", padding: "3rem 2rem", textAlign: "center" }}>
+
         {status === 'loading' && (
           <>
-            <div style={{
-              width: "80px",
-              height: "80px",
-              margin: "0 auto 1.5rem",
-              borderRadius: "50%",
-              background: "rgba(99,102,241,0.1)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center"
-            }}>
+            <div style={{ width: "80px", height: "80px", margin: "0 auto 1.5rem", borderRadius: "50%", background: "rgba(99,102,241,0.1)", display: "flex", alignItems: "center", justifyContent: "center" }}>
               <Loader size={36} style={{ color: "var(--primary)", animation: "spin 1s linear infinite" }} />
             </div>
-            <h2 style={{ fontSize: "1.5rem", fontWeight: 700, marginBottom: "0.75rem" }}>
-              Confirming Your Email
-            </h2>
-            <p style={{ color: "var(--text-secondary)", fontSize: "1rem", lineHeight: 1.6 }}>
-              Please wait while we verify your email address...
-            </p>
+            <h2 style={{ fontSize: "1.5rem", fontWeight: 700, marginBottom: "0.75rem" }}>Confirming your email...</h2>
+            <p style={{ color: "var(--text-secondary)" }}>Please wait a moment.</p>
           </>
         )}
 
         {status === 'success' && (
           <>
-            <div style={{
-              width: "80px",
-              height: "80px",
-              margin: "0 auto 1.5rem",
-              borderRadius: "50%",
-              background: "rgba(34,197,94,0.1)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center"
-            }}>
+            <div style={{ width: "80px", height: "80px", margin: "0 auto 1.5rem", borderRadius: "50%", background: "rgba(34,197,94,0.1)", display: "flex", alignItems: "center", justifyContent: "center" }}>
               <CheckCircle size={36} style={{ color: "var(--success)" }} />
             </div>
-            <h2 style={{ fontSize: "1.5rem", fontWeight: 700, marginBottom: "0.75rem" }}>
-              Email Confirmed! 🎉
-            </h2>
-            <p style={{ color: "var(--text-secondary)", fontSize: "1rem", lineHeight: 1.6 }}>
-              {message}
-            </p>
+            <h2 style={{ fontSize: "1.5rem", fontWeight: 700, marginBottom: "0.75rem" }}>Email Confirmed! 🎉</h2>
+            <p style={{ color: "var(--text-secondary)" }}>{message}</p>
           </>
         )}
 
         {status === 'error' && (
           <>
-            <div style={{
-              width: "80px",
-              height: "80px",
-              margin: "0 auto 1.5rem",
-              borderRadius: "50%",
-              background: "rgba(239,68,68,0.1)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center"
-            }}>
+            <div style={{ width: "80px", height: "80px", margin: "0 auto 1.5rem", borderRadius: "50%", background: "rgba(239,68,68,0.1)", display: "flex", alignItems: "center", justifyContent: "center" }}>
               <AlertCircle size={36} style={{ color: "var(--danger)" }} />
             </div>
-            <h2 style={{ fontSize: "1.5rem", fontWeight: 700, marginBottom: "0.75rem" }}>
-              Confirmation Failed
-            </h2>
-            <p style={{
-              color: "var(--text-secondary)",
-              fontSize: "1rem",
-              lineHeight: 1.6,
-              marginBottom: "2rem"
-            }}>
-              {message}
-            </p>
-            <button
-              onClick={() => router.push("/")}
-              className="btn btn-primary"
-            >
-              Back to Login
-            </button>
+            <h2 style={{ fontSize: "1.5rem", fontWeight: 700, marginBottom: "0.75rem" }}>Confirmation Failed</h2>
+            <p style={{ color: "var(--text-secondary)", marginBottom: "2rem" }}>{message}</p>
+            <button onClick={() => router.push("/")} className="btn btn-primary">Back to Login</button>
           </>
         )}
 
-        <style jsx>{`
-          @keyframes spin {
-            to { transform: rotate(360deg); }
-          }
-        `}</style>
-      </div>
-    </div>
-  );
-}
-
-function ConfirmFallback() {
-  return (
-    <div style={{
-      minHeight: "100vh",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      padding: "2rem",
-      background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
-    }}>
-      <div className="glass-panel" style={{
-        maxWidth: "500px",
-        padding: "3rem 2rem",
-        textAlign: "center"
-      }}>
-        <div style={{
-          width: "80px",
-          height: "80px",
-          margin: "0 auto 1.5rem",
-          borderRadius: "50%",
-          background: "rgba(99,102,241,0.1)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center"
-        }}>
-          <Loader size={36} style={{ color: "var(--primary)", animation: "spin 1s linear infinite" }} />
-        </div>
-        <h2 style={{ fontSize: "1.5rem", fontWeight: 700, marginBottom: "0.75rem" }}>
-          Loading...
-        </h2>
-        <style jsx>{`
-          @keyframes spin {
-            to { transform: rotate(360deg); }
-          }
-        `}</style>
+        <style jsx>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
     </div>
   );
@@ -205,7 +119,13 @@ function ConfirmFallback() {
 
 export default function ConfirmPage() {
   return (
-    <Suspense fallback={<ConfirmFallback />}>
+    <Suspense fallback={
+      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--bg-gradient)" }}>
+        <div className="glass-panel" style={{ maxWidth: "500px", width: "100%", padding: "3rem 2rem", textAlign: "center" }}>
+          <Loader size={36} style={{ color: "var(--primary)" }} />
+        </div>
+      </div>
+    }>
       <ConfirmContent />
     </Suspense>
   );

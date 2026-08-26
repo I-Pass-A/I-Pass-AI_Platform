@@ -955,7 +955,7 @@ export default function ExamsPage() {
                   return (
                     <div key={a.id} className="glass-panel" style={{ padding: "1.25rem 1.5rem", opacity: past && !submitted ? 0.65 : 1 }}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "1rem", flexWrap: "wrap" }}>
-                        <div style={{ flex: 1, minWidth: "200px" }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.35rem", flexWrap: "wrap" }}>
                             <span style={{ fontSize: "0.72rem", fontWeight: 700, background: `rgba(${typeColor(a.assignment_type) === "var(--primary)" ? "14,165,233" : typeColor(a.assignment_type) === "var(--secondary)" ? "20,184,166" : "99,102,241"},0.12)`, color: typeColor(a.assignment_type), padding: "0.15rem 0.5rem", borderRadius: "8px", textTransform: "capitalize" }}>
                               {typeLabel(a.assignment_type)}
@@ -1085,7 +1085,7 @@ export default function ExamsPage() {
                     const past = isPastDue(a.due_date);
                     return (
                       <div key={a.id} className="glass-panel" style={{ padding: "1.25rem 1.5rem", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "1rem" }}>
-                        <div style={{ flex: 1, minWidth: "200px" }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.35rem", flexWrap: "wrap" }}>
                             <span style={{ fontSize: "0.72rem", fontWeight: 700, color: typeColor(a.assignment_type), textTransform: "capitalize" }}>● {typeLabel(a.assignment_type)}</span>
                             <span style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>Grade {a.target_grade}</span>
