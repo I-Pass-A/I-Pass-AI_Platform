@@ -50,6 +50,7 @@ function TutorPageContent() {
   const [sending, setSending] = useState(false);
   const [fetchingSessions, setFetchingSessions] = useState(false);
   const [fetchingMessages, setFetchingMessages] = useState(false);
+  const [showMobileSubjects, setShowMobileSubjects] = useState(false);
   
 
   useEffect(() => {
@@ -453,7 +454,7 @@ function TutorPageContent() {
           <div style={{
             height: "4rem",
             borderBottom: "1px solid var(--glass-border)",
-            padding: "0 2rem",
+            padding: "0 1rem",
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
@@ -464,13 +465,14 @@ function TutorPageContent() {
               display: "flex",
               alignItems: "center",
               gap: "0.75rem",
-              minWidth: 0
+              minWidth: 0,
+              flex: 1
             }}>
               {selectedSubject ? (
                 <>
                   <MessageSquare size={20} style={{ color: "var(--primary)", flexShrink: 0 }} />
                   <h1 style={{
-                    fontSize: "1.125rem",
+                    fontSize: "1rem",
                     fontWeight: "700",
                     overflow: "hidden",
                     textOverflow: "ellipsis",
@@ -488,6 +490,28 @@ function TutorPageContent() {
               )}
             </div>
 
+            {/* Mobile: subject picker button */}
+            <button
+              onClick={() => setShowMobileSubjects(s => !s)}
+              style={{
+                display: "none",
+                alignItems: "center",
+                gap: "0.4rem",
+                padding: "0.4rem 0.75rem",
+                background: "rgba(14,165,233,0.1)",
+                border: "1px solid rgba(14,165,233,0.3)",
+                borderRadius: "8px",
+                color: "var(--primary)",
+                fontSize: "0.78rem",
+                fontWeight: 600,
+                cursor: "pointer",
+                flexShrink: 0,
+              }}
+              className="tutor-mobile-btn"
+            >
+              <PlusCircle size={14} /> {isAO ? "Haaraa" : "New"}
+            </button>
+
             <div style={{
               fontSize: "0.75rem",
               background: "rgba(20, 184, 166, 0.1)",
@@ -495,11 +519,43 @@ function TutorPageContent() {
               padding: "0.375rem 0.75rem",
               borderRadius: "9999px",
               fontWeight: "500",
-              border: "1px solid rgba(20, 184, 166, 0.2)"
+              border: "1px solid rgba(20, 184, 166, 0.2)",
+              flexShrink: 0,
+              marginLeft: "0.5rem"
             }}>
               {t.curriculumBanner}
             </div>
           </div>
+
+          {/* Mobile subject picker dropdown */}
+          {showMobileSubjects && (
+            <div style={{
+              background: "var(--sidebar-bg)",
+              borderBottom: "1px solid var(--glass-border)",
+              padding: "1rem",
+              display: "flex",
+              flexWrap: "wrap",
+              gap: "0.5rem",
+            }}>
+              {subjects.map(sub => (
+                <button
+                  key={sub}
+                  onClick={() => { startNewSession(sub); setShowMobileSubjects(false); }}
+                  style={{
+                    padding: "0.5rem 0.875rem",
+                    borderRadius: "8px",
+                    border: "1px solid var(--glass-border)",
+                    background: "var(--glass-bg)",
+                    color: "var(--text-primary)",
+                    fontSize: "0.82rem",
+                    cursor: "pointer",
+                  }}
+                >
+                  {sub}
+                </button>
+              ))}
+            </div>
+          )}
 
           {/* Messages Area */}
           <div style={{
