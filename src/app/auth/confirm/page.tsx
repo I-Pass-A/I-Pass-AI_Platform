@@ -45,12 +45,35 @@ function ConfirmContent() {
           userId = data?.user?.id ?? null;
           confirmed = !error && !!data?.user;
 
+        } else if (hash && !hashAccessToken) {
+          // Hash exists but no access_token — Supabase auth listener already consumed it
+          // Wait for onAuthStateChange to fire and set session
+          await new Promise(r => setTimeout(r, 2000));
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session?.user) {
+            userId = session.user.id;
+            confirmed = true;
+          }
+          // If still no session, fall through to error below
+
         } else if (code) {
           // PKCE code flow
           const { data, error } = await supabase.auth.exchangeCodeForSession(code);
           verifyError = error;
           userId = data?.user?.id ?? null;
           confirmed = !error && !!data?.user;
+
+          // The shared Supabase client also detects sessions in the URL. If it
+          // handled the code first, exchanging it a second time fails even
+          // though confirmation succeeded. Use that established session.
+          if (!confirmed) {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session?.user) {
+              verifyError = null;
+              userId = session.user.id;
+              confirmed = true;
+            }
+          }
 
         } else if (token_hash) {
           // OTP token_hash flow — try both 'signup' and 'email' types
@@ -78,7 +101,11 @@ function ConfirmContent() {
           }
 
         } else {
-          // No params — maybe user already confirmed, check session
+          // No params but hash exists — Supabase's auth listener may have already 
+          // processed the token. Wait briefly then check session.
+          if (hash) {
+            await new Promise(r => setTimeout(r, 1500));
+          }
           const { data: { session } } = await supabase.auth.getSession();
           if (session?.user) {
             userId = session.user.id;
@@ -98,6 +125,12 @@ function ConfirmContent() {
               ? 'This confirmation link has expired. Please sign up again to get a new one.'
               : 'Confirmation failed: ' + verifyError.message
           );
+          return;
+        }
+
+        if (!confirmed) {
+          setStatus('error');
+          setMessage('Could not verify your email. The link may have expired. Please sign up again.');
           return;
         }
 
