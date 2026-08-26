@@ -1,6 +1,6 @@
-"use client";
+﻿"use client";
 
-import React, { useState, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import Sidebar from "@/components/Sidebar";
 import AuthGuard from "@/components/AuthGuard";
@@ -19,6 +19,24 @@ export default function ProfilePage() {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!user) return;
+
+    const localAvatar = window.localStorage.getItem(`ipassa_avatar_${user.id}`);
+    if (localAvatar) {
+      // The browser-only fallback does not provide Supabase Storage. Keep the
+      // selected photo for that local/demo client without affecting production.
+      setAvatarUrl(localAvatar);
+      return;
+    }
+
+    const storage = (supabase as any).storage;
+    if (storage?.from) {
+      const { data } = storage.from("avatars").getPublicUrl(`${user.id}/profile-image`);
+      setAvatarUrl(data.publicUrl);
+    }
+  }, [user]);
 
   if (!user) return null;
 
@@ -42,25 +60,43 @@ export default function ProfilePage() {
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    setError("");
+    setSuccess("");
+    if (!file.type.startsWith("image/")) { setError("Please select an image file"); return; }
     if (file.size > 2 * 1024 * 1024) { setError("Image must be under 2MB"); return; }
 
     setUploading(true);
     try {
-      const ext = file.name.split(".").pop();
-      const path = `avatars/${user.id}.${ext}`;
-      const { error: upErr } = await supabase.storage
-        .from("avatars")
-        .upload(path, file, { upsert: true });
-      if (upErr) throw upErr;
+      const storage = (supabase as any).storage;
 
-      const { data } = supabase.storage.from("avatars").getPublicUrl(path);
-      setAvatarUrl(data.publicUrl + "?t=" + Date.now());
+      if (!storage?.from) {
+        const localUrl = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(String(reader.result));
+          reader.onerror = () => reject(new Error("Unable to read the selected image"));
+          reader.readAsDataURL(file);
+        });
+        window.localStorage.setItem(`ipassa_avatar_${user.id}`, localUrl);
+        setAvatarUrl(localUrl);
+      } else {
+        // A fixed object name replaces the existing photo regardless of the
+        // source file's extension, so later uploads never leave stale avatars.
+        const path = `${user.id}/profile-image`;
+        const { error: upErr } = await storage
+          .from("avatars")
+          .upload(path, file, { upsert: true, contentType: file.type });
+        if (upErr) throw upErr;
+
+        const { data } = storage.from("avatars").getPublicUrl(path);
+        setAvatarUrl(data.publicUrl + "?t=" + Date.now());
+      }
       setSuccess(isAO ? "Suuraan ol-kaafame!" : "Photo uploaded!");
       setTimeout(() => setSuccess(""), 3000);
     } catch (e: any) {
       setError(e.message || "Upload failed");
     } finally {
       setUploading(false);
+      e.target.value = "";
     }
   };
 
@@ -107,7 +143,7 @@ export default function ProfilePage() {
                   overflow: "hidden", fontSize: "2rem", fontWeight: 800, color: "var(--primary)"
                 }}>
                   {avatarUrl
-                    ? <img src={avatarUrl} alt="Avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    ? <img src={avatarUrl} alt="Avatar" onError={() => setAvatarUrl(null)} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                     : initials}
                 </div>
                 <button
