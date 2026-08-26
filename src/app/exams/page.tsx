@@ -735,7 +735,7 @@ export default function ExamsPage() {
                 cursor: "pointer",
                 color: tab === t.id ? "var(--primary)" : "var(--text-secondary)",
                 borderBottom: tab === t.id ? "2px solid var(--primary)" : "2px solid transparent",
-                marginBottom: "-1px",
+                paddingBottom: "calc(0.7rem - 2px)",
                 transition: "all 0.15s",
                 whiteSpace: "nowrap",
                 flexShrink: 0,
