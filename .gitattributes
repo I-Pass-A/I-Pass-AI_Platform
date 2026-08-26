@@ -1,0 +1,22 @@
+# Force LF line endings on all text files
+* text=auto eol=lf
+
+# CSS files — force LF, no BOM
+*.css text eol=lf
+src/app/globals.css text eol=lf
+
+# TypeScript/JavaScript
+*.ts text eol=lf
+*.tsx text eol=lf
+*.js text eol=lf
+*.mjs text eol=lf
+*.json text eol=lf
+
+# Binary files — no conversion
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.pdf binary
