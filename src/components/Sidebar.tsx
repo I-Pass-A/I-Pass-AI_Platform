@@ -7,11 +7,12 @@ import {
   Globe, LayoutDashboard, BookOpen, History, Eye, Menu, X,
 } from "lucide-react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 export default function Sidebar() {
   const { user, logout, updateUserLanguage, updateUserGrade } = useAuth();
   const pathname = usePathname();
+  const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
 
   // Close sidebar on route change (mobile)

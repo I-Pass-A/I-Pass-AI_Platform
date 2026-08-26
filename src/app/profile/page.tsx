@@ -146,7 +146,7 @@ export default function ProfilePage() {
 
             {/* Info card */}
             <div className="glass-panel" style={{ padding: "2rem" }}>
-              <h3 style={{ fontSize: "1rem", fontWeight: 700, marginBottom: "1.25rem", color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.05em", fontSize: "0.78rem" }}>
+              <h3 style={{ fontWeight: 700, marginBottom: "1.25rem", color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.05em", fontSize: "0.78rem" }}>
                 {isAO ? "Odeeffannoo Koo" : "Account Information"}
               </h3>
               <div style={{ display: "flex", flexDirection: "column" }}>
