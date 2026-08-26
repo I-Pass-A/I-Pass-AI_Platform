@@ -51,13 +51,9 @@ function ConfirmContent() {
           return;
         }
 
-        // Update profile
-        if (userId) {
-          await supabase
-            .from('profiles')
-            .update({ email_verified: true, is_active: true })
-            .eq('id', userId);
-        }
+        // Profile update handled server-side by trigger
+        // Don't update email_verified from client — RLS blocks it
+        // The trigger on auth.users handles this automatically
 
         setStatus('success');
         setMessage('Your email is confirmed! Redirecting to your dashboard...');
