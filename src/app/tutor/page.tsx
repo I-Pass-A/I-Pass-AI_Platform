@@ -533,9 +533,8 @@ function TutorPageContent() {
                   maxWidth: "28rem"
                 }}>{t.noActiveSessionDesc}</p>
                 
-                {/* Mobile: Show subject selection */}
+                {/* Subject selection — always visible when no active session */}
                 <div 
-                  className="md:hidden"
                   style={{
                     marginTop: "1.5rem",
                     width: "100%",
