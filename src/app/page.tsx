@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
@@ -31,6 +31,7 @@ export default function Home() {
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   // Forgot password state
   const [showForgot, setShowForgot] = useState(false);
@@ -561,7 +562,7 @@ export default function Home() {
                           style={{ width: "100%" }}
                         >
                           <option value="">{lang === "EN" ? "Select age" : "Filadhu"}</option>
-                          {Array.from({ length: 14 }, (_, i) => i + 5).map(a => (
+                          {Array.from({ length: 56 }, (_, i) => i + 5).map(a => (
                             <option key={a} value={String(a)}>{a}</option>
                           ))}
                         </select>
@@ -645,14 +646,23 @@ export default function Home() {
                   <div style={{ position: "relative" }}>
                     <Lock size={16} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)" }} />
                     <input
-                      type="password"
+                      type={showPassword ? "text" : "password"}
                       className="form-input"
                       placeholder="••••••••"
                       required
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      style={{ width: "100%", paddingLeft: "2.5rem", borderColor: !isLogin && password && password.length < 8 ? "var(--danger)" : undefined }}
+                      style={{ width: "100%", paddingLeft: "2.5rem", paddingRight: "2.5rem", borderColor: !isLogin && password && password.length < 8 ? "var(--danger)" : undefined }}
                     />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(p => !p)}
+                      style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", padding: 0, display: "flex", alignItems: "center" }}
+                    >
+                      {showPassword
+                        ? <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                        : <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>}
+                    </button>
                   </div>
                   {isLogin && (
                     <button
