@@ -1,36 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase";
-import { createClient } from "@supabase/supabase-js";
+import { isAuthError, requireRole } from "@/lib/api-auth";
 
 export async function POST(req: NextRequest) {
   try {
+    const auth = await requireRole(req, ["student"], "student");
+    if (isAuthError(auth)) return auth;
     const { exam_id, answers } = await req.json();
 
     if (!exam_id || answers === undefined) {
       return NextResponse.json({ detail: "exam_id and answers are required" }, { status: 400 });
     }
-
-    // --- Security: derive student_id from the session token, never trust the client ---
-    const authHeader = req.headers.get("authorization");
-    const accessToken = authHeader?.replace("Bearer ", "").trim();
-
-    let verifiedStudentId: string | null = null;
-
-    if (
-      accessToken &&
-      process.env.NEXT_PUBLIC_SUPABASE_URL &&
-      process.env.NEXT_PUBLIC_SUPABASE_URL !== "https://placeholder-project-id.supabase.co"
-    ) {
-      const supabaseUser = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-      );
-      const { data: { user }, error: userErr } = await supabaseUser.auth.getUser(accessToken);
-      if (!userErr && user) {
-        verifiedStudentId = user.id;
-      }
-    }
-    // In mock/dev mode (no real Supabase) we skip the attempt save rather than trusting client input
 
     const supabaseAdmin = getSupabaseAdmin();
 
@@ -101,14 +81,12 @@ export async function POST(req: NextRequest) {
     const finalScore = total > 0 ? (score / total) * 100 : 0;
 
     // 2. Save the attempt using the server-verified student id
-    if (verifiedStudentId) {
-      await supabaseAdmin.from("exam_attempts").insert({
-        exam_id,
-        student_id: verifiedStudentId,
-        answers,
-        score: finalScore
-      });
-    }
+    await supabaseAdmin.from("exam_attempts").insert({
+      exam_id,
+      student_id: auth.id,
+      answers,
+      score: finalScore
+    });
 
     return NextResponse.json({
       score: finalScore,

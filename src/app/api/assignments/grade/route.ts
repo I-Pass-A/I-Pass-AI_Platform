@@ -1,43 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase";
-import { createClient } from "@supabase/supabase-js";
+import { isAuthError, requireRole } from "@/lib/api-auth";
 
 // PATCH /api/assignments/grade
 // Teacher sets teacher_score and optional feedback on a submission.
 // Only the teacher who owns the assignment may grade it.
 
 export async function PATCH(req: NextRequest) {
-  const authHeader = req.headers.get("authorization");
-  const accessToken = authHeader?.replace("Bearer ", "").trim();
-
-  let teacherId: string | null = null;
-  let callerRole: string | null = null;
-
-  if (
-    accessToken &&
-    process.env.NEXT_PUBLIC_SUPABASE_URL &&
-    process.env.NEXT_PUBLIC_SUPABASE_URL !== "https://placeholder-project-id.supabase.co"
-  ) {
-    const supabaseUser = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
-    const { data: { user } } = await supabaseUser.auth.getUser(accessToken);
-    if (!user) return NextResponse.json({ detail: "Unauthorized" }, { status: 401 });
-
-    const supabaseAdmin = getSupabaseAdmin();
-    const { data: profile } = await supabaseAdmin
-      .from("profiles")
-      .select("role")
-      .eq("id", user.id)
-      .single();
-
-    callerRole = profile?.role ?? null;
-    if (!["teacher", "admin"].includes(callerRole ?? "")) {
-      return NextResponse.json({ detail: "Forbidden: only teachers can grade submissions." }, { status: 403 });
-    }
-    teacherId = user.id;
-  }
+  const auth = await requireRole(req, ["teacher", "admin"], "teacher");
+  if (isAuthError(auth)) return auth;
 
   try {
     const { submission_id, teacher_score, teacher_feedback } = await req.json();
@@ -53,23 +24,21 @@ export async function PATCH(req: NextRequest) {
     const supabaseAdmin = getSupabaseAdmin();
 
     // Verify the submission belongs to an assignment owned by this teacher
-    if (teacherId) {
-      const { data: sub } = await supabaseAdmin
-        .from("assignment_submissions")
-        .select("assignment_id")
-        .eq("id", submission_id)
+    const { data: sub } = await supabaseAdmin
+      .from("assignment_submissions")
+      .select("assignment_id")
+      .eq("id", submission_id)
+      .single();
+
+    if (sub) {
+      const { data: assignment } = await supabaseAdmin
+        .from("teacher_assignments")
+        .select("teacher_id")
+        .eq("id", sub.assignment_id)
         .single();
 
-      if (sub) {
-        const { data: assignment } = await supabaseAdmin
-          .from("teacher_assignments")
-          .select("teacher_id")
-          .eq("id", sub.assignment_id)
-          .single();
-
-        if (assignment && assignment.teacher_id !== teacherId && callerRole !== "admin") {
-          return NextResponse.json({ detail: "Forbidden: you do not own this assignment." }, { status: 403 });
-        }
+      if (assignment && assignment.teacher_id !== auth.id && auth.role !== "admin") {
+        return NextResponse.json({ detail: "Forbidden: you do not own this assignment." }, { status: 403 });
       }
     }
 

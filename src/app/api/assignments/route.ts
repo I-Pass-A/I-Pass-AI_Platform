@@ -1,56 +1,22 @@
 ﻿import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase";
-
-// Decode JWT payload without network call — avoids extra round trip to Supabase Auth
-function decodeJwt(token: string): Record<string, any> | null {
-  try {
-    const payload = token.split(".")[1];
-    const decoded = Buffer.from(payload, "base64url").toString("utf8");
-    return JSON.parse(decoded);
-  } catch {
-    return null;
-  }
-}
+import { isAuthError, requireRole } from "@/lib/api-auth";
 
 // GET  /api/assignments  — list assignments visible to the current user
 // POST /api/assignments  — teacher publishes a generated exam as an assignment
 
 export async function GET(req: NextRequest) {
-  const authHeader = req.headers.get("authorization");
-  const accessToken = authHeader?.replace("Bearer ", "").trim();
-
+  const auth = await requireRole(req, ["student", "teacher", "admin"], "student");
+  if (isAuthError(auth)) return auth;
   const supabaseAdmin = getSupabaseAdmin();
-
-  // Decode JWT locally — zero network calls, instant
-  let callerId: string | null = null;
-  let callerRole: string | null = null;
   let callerGrade: string | null = null;
-
-  if (accessToken) {
-    const jwt = decodeJwt(accessToken);
-    if (jwt?.sub) {
-      callerId = jwt.sub;
-      const meta = jwt.user_metadata ?? jwt.raw_user_meta_data ?? {};
-      callerRole = meta.role ?? null;
-
-      // Grade: for teacher use grade_taught, for student use grade
-      if (callerRole === "teacher") {
-        callerGrade = meta.grade_taught ?? null;
-      } else {
-        callerGrade = meta.grade ?? null;
-      }
-
-      // Fallback: if metadata missing, fetch profile once (rare case)
-      if (!callerRole) {
-        const { data: profile } = await supabaseAdmin
-          .from("profiles")
-          .select("role, grade, grade_taught")
-          .eq("id", callerId)
-          .single();
-        callerRole = profile?.role ?? null;
-        callerGrade = callerRole === "teacher" ? (profile?.grade_taught ?? null) : (profile?.grade ?? null);
-      }
-    }
+  if (auth.role === "student") {
+    const { data: profile } = await supabaseAdmin
+      .from("profiles")
+      .select("grade")
+      .eq("id", auth.id)
+      .single();
+    callerGrade = profile?.grade ?? null;
   }
 
   try {
@@ -63,19 +29,16 @@ export async function GET(req: NextRequest) {
       `)
       .order("created_at", { ascending: false });
 
-    if (callerRole === "teacher") {
+    if (auth.role === "teacher") {
       // Teachers see their own assignments regardless of publish state
-      query = query.eq("teacher_id", callerId!);
-    } else if (callerRole === "student") {
+      query = query.eq("teacher_id", auth.id);
+    } else if (auth.role === "student") {
       // Students see only published assignments for their grade that are not past due
       query = query
         .eq("published", true)
         .eq("target_grade", callerGrade ?? "");
-    } else if (callerRole === "admin") {
+    } else if (auth.role === "admin") {
       // Admins see everything — no filter
-    } else {
-      // Unauthenticated / mock mode — return published only
-      query = query.eq("published", true);
     }
 
     const { data, error } = await query;
@@ -88,24 +51,8 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const authHeader = req.headers.get("authorization");
-  const accessToken = authHeader?.replace("Bearer ", "").trim();
-
-  // Auth check — only teachers (and admins) may publish assignments
-  let teacherId: string | null = null;
-
-  if (accessToken) {
-    const jwt = decodeJwt(accessToken);
-    if (jwt?.sub) {
-      const role = jwt.user_metadata?.role ?? jwt.raw_user_meta_data?.role;
-      if (role === "teacher" || role === "admin") {
-        teacherId = jwt.sub;
-      } else {
-        return NextResponse.json({ detail: "Forbidden: only teachers can publish assignments." }, { status: 403 });
-      }
-    }
-  }
-
+  const auth = await requireRole(req, ["teacher", "admin"], "teacher");
+  if (isAuthError(auth)) return auth;
   try {
     const body = await req.json();
     const { exam_id, title, assignment_type, target_grade, due_date, publish_now } = body;
@@ -124,7 +71,7 @@ export async function POST(req: NextRequest) {
       .from("teacher_assignments")
       .insert({
         exam_id,
-        teacher_id: teacherId ?? "mock-teacher-id",
+        teacher_id: auth.id,
         title,
         assignment_type,
         target_grade,

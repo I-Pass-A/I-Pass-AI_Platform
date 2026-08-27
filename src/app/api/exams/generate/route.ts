@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { generateWithMultiProvider } from "@/lib/ai/multi-provider";
+import { isAuthError, requireRole } from "@/lib/api-auth";
 
 export async function POST(req: NextRequest) {
   try {
+    const auth = await requireRole(req, ["teacher", "admin"], "teacher");
+    if (isAuthError(auth)) return auth;
     const { subject, topic, difficulty, grade, question_types, question_count } = await req.json();
 
     if (!subject || !topic) {
@@ -11,14 +14,6 @@ export async function POST(req: NextRequest) {
     }
 
     const supabaseAdmin = getSupabaseAdmin();
-
-    // Get authenticated user
-    const authHeader = req.headers.get("authorization");
-    let userId: string | null = null;
-    if (authHeader?.startsWith("Bearer ")) {
-      const { data: { user } } = await supabaseAdmin.auth.getUser(authHeader.substring(7));
-      userId = user?.id ?? null;
-    }
 
     // Resolve grade band
     const gradeNum = parseInt(grade?.replace("Grade", "").trim() || "12");
@@ -148,7 +143,7 @@ OUTPUT FORMAT (raw JSON only, nothing else before or after):
         grade:       gradeBand,
         questions:   examData.questions,
         answer_key:  examData.answer_key || [],
-        created_by:  userId,
+        created_by:  auth.id,
       })
       .select("id, subject, topic, difficulty, grade, questions, created_at")
       .single();

@@ -1,8 +1,11 @@
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { NextRequest, NextResponse } from "next/server";
+import { isAuthError, requireRole } from "@/lib/api-auth";
 
 export async function GET(req: NextRequest) {
   try {
+    const auth = await requireRole(req, ["admin"], "admin");
+    if (isAuthError(auth)) return auth;
     const supabase = getSupabaseAdmin();
     
     // Basic analytics for now - can be expanded later

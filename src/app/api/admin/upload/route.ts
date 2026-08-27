@@ -1,42 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { GoogleGenAI } from "@google/genai";
-import { createClient } from "@supabase/supabase-js";
+import { isAuthError, requireRole } from "@/lib/api-auth";
 
 export async function POST(req: NextRequest) {
+  const auth = await requireRole(req, ["admin"], "admin");
+  if (isAuthError(auth)) return auth;
+
   // Move require inside POST to prevent evaluation crash (DOMMatrix is not defined) during Next.js build time
   const pdf = require("pdf-parse");
-
-  // --- Server-side role check: only admins may upload curriculum ---
-  const authHeader = req.headers.get("authorization");
-  const accessToken = authHeader?.replace("Bearer ", "").trim();
-
-  if (
-    accessToken &&
-    process.env.NEXT_PUBLIC_SUPABASE_URL &&
-    process.env.NEXT_PUBLIC_SUPABASE_URL !== "https://placeholder-project-id.supabase.co"
-  ) {
-    const supabaseUser = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
-    const { data: { user }, error: userErr } = await supabaseUser.auth.getUser(accessToken);
-    if (userErr || !user) {
-      return NextResponse.json({ detail: "Unauthorized" }, { status: 401 });
-    }
-    // Check role in profiles table
-    const supabaseAdmin = getSupabaseAdmin();
-    const { data: profile } = await supabaseAdmin
-      .from("profiles")
-      .select("role")
-      .eq("id", user.id)
-      .single();
-
-    if (!profile || profile.role !== "admin") {
-      return NextResponse.json({ detail: "Forbidden: only administrators can upload curriculum materials." }, { status: 403 });
-    }
-  }
-  // In mock/dev mode (no real Supabase configured) the check is skipped so local dev still works
 
   try {
     const formData = await req.formData();
@@ -126,7 +98,7 @@ export async function POST(req: NextRequest) {
         content: chunkText,
         embedding,
         version: 1,
-        uploaded_by: uploadedBy || "System"
+        uploaded_by: uploadedBy || auth.id
       }).select();
 
       if (error) {

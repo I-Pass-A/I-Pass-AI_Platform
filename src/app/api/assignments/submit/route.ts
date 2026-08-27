@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase";
-import { createClient } from "@supabase/supabase-js";
+import { isAuthError, requireRole } from "@/lib/api-auth";
 
 // POST /api/assignments/submit
 // Student submits answers for a teacher-published assignment.
@@ -8,24 +8,9 @@ import { createClient } from "@supabase/supabase-js";
 // and wait for teacher manual grading.
 
 export async function POST(req: NextRequest) {
-  // Verify identity from token — student_id is never trusted from client
-  const authHeader = req.headers.get("authorization");
-  const accessToken = authHeader?.replace("Bearer ", "").trim();
-
-  let studentId: string | null = null;
-
-  if (
-    accessToken &&
-    process.env.NEXT_PUBLIC_SUPABASE_URL &&
-    process.env.NEXT_PUBLIC_SUPABASE_URL !== "https://placeholder-project-id.supabase.co"
-  ) {
-    const supabaseUser = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
-    const { data: { user } } = await supabaseUser.auth.getUser(accessToken);
-    if (user) studentId = user.id;
-  }
+  const auth = await requireRole(req, ["student"], "student");
+  if (isAuthError(auth)) return auth;
+  const studentId = auth.id;
 
   try {
     const { assignment_id, answers } = await req.json();
@@ -56,17 +41,15 @@ export async function POST(req: NextRequest) {
     }
 
     // 2. Check student hasn't already submitted
-    if (studentId) {
-      const { data: existing } = await supabaseAdmin
-        .from("assignment_submissions")
-        .select("id")
-        .eq("assignment_id", assignment_id)
-        .eq("student_id", studentId)
-        .single();
+    const { data: existing } = await supabaseAdmin
+      .from("assignment_submissions")
+      .select("id")
+      .eq("assignment_id", assignment_id)
+      .eq("student_id", studentId)
+      .single();
 
-      if (existing) {
-        return NextResponse.json({ detail: "You have already submitted this assignment." }, { status: 400 });
-      }
+    if (existing) {
+      return NextResponse.json({ detail: "You have already submitted this assignment." }, { status: 400 });
     }
 
     // 3. Auto-score: fetch answer key
@@ -118,7 +101,7 @@ export async function POST(req: NextRequest) {
       .insert({
         assignment_id,
         exam_id: assignment.exam_id,
-        student_id: studentId ?? "mock-student-id",
+        student_id: studentId,
         answers,
         raw_score: rawScore,
         teacher_score: isFullyGraded ? rawScore : null,

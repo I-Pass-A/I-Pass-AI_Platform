@@ -5,21 +5,6 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-// Debug environment variables (only in development)
-if (typeof window === 'undefined') { // Server-side only
-  console.log('🔧 Supabase Config Check:');
-  console.log('URL:', supabaseUrl ? '✅ Set' : '❌ Missing');
-  console.log('Anon Key:', supabaseAnonKey ? '✅ Set' : '❌ Missing');
-  console.log('Service Key:', supabaseServiceKey ? '✅ Set' : '❌ Missing');
-}
-
-// Client-side debug (visible in browser console)
-if (typeof window !== 'undefined') {
-  console.log('🌐 Client Supabase Config:');
-  console.log('URL:', supabaseUrl || '❌ Missing');
-  console.log('Anon Key:', supabaseAnonKey ? '✅ Set' : '❌ Missing');
-}
-
 const isRealConfigured = 
   supabaseUrl && 
   supabaseAnonKey &&
