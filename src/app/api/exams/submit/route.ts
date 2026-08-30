@@ -54,9 +54,27 @@ export async function POST(req: NextRequest) {
       // Resolve type from questions array (more reliable than answer_key.type)
       const qType = questionTypeMap[qId] ?? keyItem.type ?? "multiple_choice";
 
-      // MC and True/False: exact match only
+      // MC and True/False: exact match, or match by first letter/option prefix
       if (qType === "multiple_choice" || qType === "true_false") {
-        isCorrect = correctVal === studentVal;
+        // Exact match
+        if (correctVal === studentVal) {
+          isCorrect = true;
+        } else {
+          // Extract just the letter prefix (A, B, C, D) from both
+          const correctLetter = correctVal.match(/^([a-d])\./)?.[1] || correctVal.charAt(0);
+          const studentLetter = studentVal.match(/^([a-d])\./)?.[1] || studentVal.charAt(0);
+          if (correctLetter && studentLetter && correctLetter === studentLetter) {
+            isCorrect = true;
+          }
+          // Also try: correct_answer might be just the text without prefix
+          if (!isCorrect) {
+            const correctText = correctVal.replace(/^[a-d]\.\s*/i, '').trim();
+            const studentText = studentVal.replace(/^[a-d]\.\s*/i, '').trim();
+            if (correctText.length > 3 && studentText.length > 3 && correctText === studentText) {
+              isCorrect = true;
+            }
+          }
+        }
       } else {
         // Fill-in-blank and definition: partial match, but student answer
         // must be at least 3 characters to prevent single-letter false positives
