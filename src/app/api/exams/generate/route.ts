@@ -52,6 +52,8 @@ export async function POST(req: NextRequest) {
     }
 
     // 2. Build prompt
+    const isAO = language === "Afaan Oromo";
+
     const systemPrompt = `You are an exam generator. Output ONLY raw JSON with no explanation, no markdown, no preamble.
 
 EXAM SPEC:
@@ -65,23 +67,24 @@ EXAM SPEC:
 ${contextBlock ? `CURRICULUM CONTEXT:\n${contextBlock}\n` : ""}
 
 CRITICAL RULES:
-1. Every answer_key entry MUST have a non-empty explanation (1-2 sentences saying WHY the answer is correct)
-2. Explanations must be educational and reference the subject matter
+1. ALL text (questions, options, explanations) MUST be written in ${language}
+2. Every answer_key entry MUST have a non-empty explanation (1-2 sentences saying WHY the answer is correct) in ${language}
 3. Never leave explanation as empty string ""
+4. For Afaan Oromo: write everything in Afaan Oromo language
 
 OUTPUT FORMAT (raw JSON only, nothing else before or after):
 {
   "questions": [
     {"id": 1, "type": "multiple_choice", "question_text": "...", "options": ["A. ...", "B. ...", "C. ...", "D. ..."]},
-    {"id": 2, "type": "true_false", "question_text": "...", "options": ["True", "False"]},
-    {"id": 3, "type": "blank_space", "question_text": "The ___ is responsible for ..."},
-    {"id": 4, "type": "definition", "question_text": "Define: photosynthesis"}
+    {"id": 2, "type": "true_false", "question_text": "...", "options": ${isAO ? '["Dhugaa", "Soba"]' : '["True", "False"]'}},
+    {"id": 3, "type": "blank_space", "question_text": "..."},
+    {"id": 4, "type": "definition", "question_text": "..."}
   ],
   "answer_key": [
-    {"id": 1, "correct_answer": "A. ...", "explanation": "This is correct because [reason from curriculum]."},
-    {"id": 2, "correct_answer": "True", "explanation": "This is true because [reason from curriculum]."},
-    {"id": 3, "correct_answer": "mitochondria", "explanation": "The mitochondria is responsible for [reason]."},
-    {"id": 4, "correct_answer": "Photosynthesis is the process by which...", "explanation": "Photosynthesis converts light energy into chemical energy stored in glucose."}
+    {"id": 1, "correct_answer": "A. ...", "explanation": "${isAO ? 'Deebiin kun sirrii dha sababni isaa...' : 'This is correct because...'}"},
+    {"id": 2, "correct_answer": "${isAO ? 'Dhugaa' : 'True'}", "explanation": "${isAO ? 'Kun dhugaa dha sababni isaa...' : 'This is true because...'}"},
+    {"id": 3, "correct_answer": "...", "explanation": "${isAO ? 'Deebiin sirrii ... dha sababni isaa...' : 'The correct answer is... because...'}"},
+    {"id": 4, "correct_answer": "...", "explanation": "${isAO ? 'Hiikni isaa... dha.' : 'The definition is...'}"}
   ]
 }`;
 
@@ -126,7 +129,7 @@ OUTPUT FORMAT (raw JSON only, nothing else before or after):
       const q = examData.questions.find((q: any) => q.id === item.id) || examData.questions[idx];
       if (!item.explanation || item.explanation.trim() === "") {
         item.explanation = language === "Afaan Oromo"
-          ? `Deebiin sirrii "${item.correct_answer}" dha. ${q?.question_text ? `Gaaffii "${q.question_text.slice(0, 60)}" irratti.' ` : ""}`
+          ? `Deebiin sirrii "${item.correct_answer}" dha.`
           : `The correct answer is "${item.correct_answer}". Review your ${subject} notes on "${topic}" for more details.`;
       }
       return item;
