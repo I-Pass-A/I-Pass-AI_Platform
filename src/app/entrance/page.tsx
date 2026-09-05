@@ -104,6 +104,41 @@ export default function EntrancePage() {
 
   if (!user) return null;
 
+  // Grade 6 and 8 entrance exam data not yet uploaded — show coming soon
+  if (activeGrade === "6" || activeGrade === "8") {
+    return (
+      <AuthGuard>
+        <div className="app-container">
+          <Sidebar />
+          <main className="main-content" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", gap: "1.5rem" }}>
+            <div style={{ width: "72px", height: "72px", borderRadius: "50%", background: "rgba(245,158,11,0.1)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <Clock size={32} style={{ color: "var(--warning)" }} />
+            </div>
+            <div>
+              <h2 style={{ fontSize: "1.5rem", fontWeight: 800, marginBottom: "0.5rem" }}>
+                Dhiyoo Dhufa — Kutaa {activeGrade}
+              </h2>
+              <p style={{ color: "var(--text-secondary)", fontSize: "0.95rem", lineHeight: 1.7, maxWidth: "480px" }}>
+                Qormaata seennaa naannoo Kutaa {activeGrade} ammaaf hin argamu. Gaaffilee qormaata seennaa dhugaa fi modela Naannoo Oromiyaa kuusaa keenya keessatti galchuun hojjechaa jirra. Dhumarratti argama — ariifannaan!
+              </p>
+              <p style={{ color: "var(--text-muted)", fontSize: "0.82rem", marginTop: "0.5rem" }}>
+                <em>Regional entrance exam prep for Grade {activeGrade} is coming soon. We are uploading real Oromia Education Bureau past papers and model exams.</em>
+              </p>
+            </div>
+            <div style={{ display: "flex", gap: "0.75rem", marginTop: "0.5rem" }}>
+              <a href="/tutor" className="btn btn-primary">
+                {isAO ? "Barsiisaa AI Fayyadami" : "Use AI Tutor"}
+              </a>
+              <a href="/exams" className="btn btn-outline">
+                {isAO ? "Qormaata Shaakali" : "Practice Exams"}
+              </a>
+            </div>
+          </main>
+        </div>
+      </AuthGuard>
+    );
+  }
+
   return (
     <AuthGuard>
       <div className="app-container">
