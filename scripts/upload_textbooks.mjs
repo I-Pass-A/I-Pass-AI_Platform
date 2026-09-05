@@ -1,4 +1,4 @@
-/**
+﻿/**
  * I-Pass-A Structured Textbook Uploader
  * ======================================
  * Supports .pdf, .txt, and .docx files.
@@ -101,9 +101,29 @@ const GRADE_CONFIGS = {
   grade12: { dir: join(__dirname, "textbooks", "grade12"), grade: "12", language: "English" },
   grade6:  { dir: join(__dirname, "textbooks", "grade6"),  grade: "6",  language: "Afaan Oromo" },
   grade8:  { dir: join(__dirname, "textbooks", "grade8"),  grade: "8",  language: "Afaan Oromo" },
+  entrance12: { dir: join(__dirname, "textbooks", "entrance", "grade12"), grade: "entrance_12", language: "English" },
+  entrance6:  { dir: join(__dirname, "textbooks", "entrance", "grade6"),  grade: "entrance_6",  language: "Afaan Oromo" },
+  entrance8:  { dir: join(__dirname, "textbooks", "entrance", "grade8"),  grade: "entrance_8",  language: "Afaan Oromo" },
 };
 
-// Filename stem → subject name (must match src/lib/subjects.ts exactly)
+// Entrance exam files (UEE past papers + model exams)
+const ENTRANCE_SUBJECT_MAP = {
+  "entrance-g12-biology-2015":    "Biology",
+  "entrance-g12-chemistry-2015":  "Chemistry",
+  "entrance-g12-mathematics-2015":"Mathematics",
+  "entrance-g12-physics-2015":    "Physics",
+  "entrance-g12-sat-2015":        "SAT",
+  "entrance-g12-english-2015":    "English",
+  "entrance-g12-biology-2017":    "Biology",
+  "entrance-g12-chemistry-2017":  "Chemistry",
+  "entrance-g12-geography-2017":  "Geography",
+  "entrance-g12-aptitude-2017":   "Aptitude",
+  "entrance-g12-economics-2017":  "Economics",
+  "entrance-g12-english-2017":    "English",
+  "entrance-g12-history-2017":    "History",
+  "entrance-g12-mathematics-2017":"Mathematics",
+  "entrance-g12-physics-2017":    "Physics",
+};
 const SUBJECT_MAP = {
   "g12-agriculture":      "Agriculture",
   "g12-biology":          "Biology", 
@@ -524,7 +544,7 @@ async function main() {
   let successFiles = 0;
 
   for (const [gradeKey, { dir, grade, language }] of Object.entries(GRADE_CONFIGS)) {
-    if (filterTokens?.some((t) => t.startsWith("grade"))) {
+    if (filterTokens?.some((t) => t.startsWith("grade") || t.startsWith("entrance"))) {
       if (!filterTokens.includes(gradeKey)) continue;
     }
 
@@ -537,7 +557,7 @@ async function main() {
     const allFiles = readdirSync(dir).filter((f) => /\.(pdf|txt|docx)$/i.test(f));
     if (allFiles.length === 0) continue;
 
-    const files = filterTokens && !filterTokens.some((t) => t.startsWith("grade"))
+    const files = filterTokens && !filterTokens.some((t) => t.startsWith("grade") || t.startsWith("entrance"))
       ? allFiles.filter((f) => {
           const stem = f.replace(/\.(pdf|txt|docx)$/i, "").toLowerCase();
           const subj = (SUBJECT_MAP[stem] ?? "").toLowerCase();
@@ -551,7 +571,7 @@ async function main() {
 
     for (const filename of files) {
       const stem = filename.replace(/\.(pdf|txt|docx)$/i, "").toLowerCase();
-      const subject = SUBJECT_MAP[stem];
+      const subject = SUBJECT_MAP[stem] || ENTRANCE_SUBJECT_MAP[stem];
       const ext = filename.split(".").pop().toLowerCase();
 
       if (!subject) {
