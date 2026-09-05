@@ -4,7 +4,7 @@ import { isAuthError, requireRole } from "@/lib/api-auth";
 
 export async function POST(req: NextRequest) {
   try {
-    const auth = await requireRole(req, ["student"], "student");
+    const auth = await requireRole(req, ["student", "teacher", "admin"], "student");
     if (isAuthError(auth)) return auth;
     const { exam_id, answers } = await req.json();
 
@@ -41,18 +41,23 @@ export async function POST(req: NextRequest) {
     const results = [];
     const total = answerKey.length;
 
-    for (const ans of answers) {
+    for (let i = 0; i < answers.length; i++) {
+      const ans = answers[i];
       const qId = ans.id;
       const studentVal = String(ans.answer || "").trim().toLowerCase();
 
-      const keyItem = correctMap[qId];
-      if (!keyItem) continue;
+      // Try to find by ID first, then fall back to index position
+      const keyItem = correctMap[qId] ?? answerKey[i];
+      if (!keyItem) {
+        results.push({ id: qId, student_answer: ans.answer, correct_answer: "—", is_correct: false, explanation: "" });
+        continue;
+      }
 
       const correctVal = String(keyItem.correct_answer || "").trim().toLowerCase();
       let isCorrect = false;
 
-      // Resolve type from questions array (more reliable than answer_key.type)
-      const qType = questionTypeMap[qId] ?? keyItem.type ?? "multiple_choice";
+      // Resolve type — use index-matched question if ID doesn't match
+      const qType = questionTypeMap[qId] ?? questionTypeMap[keyItem.id] ?? keyItem.type ?? "multiple_choice";
 
       // MC and True/False: exact match, or match by first letter/option prefix
       if (qType === "multiple_choice" || qType === "true_false") {
