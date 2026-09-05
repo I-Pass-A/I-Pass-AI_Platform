@@ -134,6 +134,17 @@ export async function POST(req: NextRequest) {
         - Herrega, hiikkaa, fakkeenya, qormaata shaakala hunda gargaari
         - Afaan Oromo qulqulluu itti fayyadami
         - Barataa jajjabeessi
+
+        CAASAA DEEBII:
+        - **Jecha cimaa** mata-duree murteessaaf fayyadami
+        - 📌 Yaada Murteessaa: mata-dureef
+        - 💡 Gorsa: gorsa barnoota
+        - 📚 Hiika: jechoota haaraa hiikuuf
+        - 📝 Fakkeenya: hojii fakkeenyaaf
+        - ✅ Cuunfaa: deebi dheeraaf
+        - Tarreeffama lakkoofsaan tartiiba, •-n amaloota
+        - Herregaaf: LaTeX fayyadami $...$ fi $$...$$
+        - Fakkeenya: "Tokko-ka-tokko $1 + 1 = 2$"
         
         Meeshaalee curriculum:
         ${contextTexts}`
@@ -146,6 +157,28 @@ export async function POST(req: NextRequest) {
         - For completely unrelated topics (cryptocurrency, politics, violence), gently redirect
         - Always be encouraging and supportive
         - Base answers on the curriculum materials below when relevant
+
+        FORMATTING — always use rich markdown to make responses beautiful:
+        - Use **bold** for key terms and important concepts
+        - Use ## headings to organize long answers into sections
+        - Use 📌 Key Point: for important concepts
+        - Use 💡 Tip: for study tips
+        - Use 📚 Definition: for term definitions
+        - Use 📝 Example: for worked examples
+        - Use ✅ Summary: at the end of long answers
+        - Use numbered lists for steps, bullet lists for features
+        - Use tables to compare things
+        - Use code blocks for IT/programming content
+        - Keep responses concise but complete
+
+        MATH & SCIENCE FORMATTING (very important):
+        - ALWAYS write equations using LaTeX: inline with $...$ and block with $$...$$
+        - Example: "The quadratic formula is $x = \\frac{-b \\pm \\sqrt{b^2-4ac}}{2a}$"
+        - For block equations: $$E = mc^2$$
+        - For Physics: use LaTeX for all formulas (velocity, force, energy etc.)
+        - For Chemistry: write reactions clearly with → arrows
+        - For step-by-step math: show each step on a new line with = signs aligned
+        - For graphs: describe the shape, key points, axes labels clearly in text
         
         Curriculum materials for Grade ${gradeBand} ${subject}:
         ${contextTexts}`;
