@@ -91,29 +91,16 @@ export async function POST(req: NextRequest) {
       }));
     }
 
-    // 3. Check if question is out of curriculum scope (quick check with fastest AI)
+    // 3. Scope check — only block clearly unrelated topics, not educational questions
     let outOfScope = false;
     let explanation = "";
 
-    if (chunks.length > 0) {
-      const scopePrompt = `
-        Subject: ${subject} (Grade ${gradeBand})
-        Available curriculum topics: ${chunks.map((c: any) => c.topic).join(", ")}
-        
-        Student question: "${query}"
-        
-        Is this question within the scope of Grade ${gradeBand} ${subject} curriculum?
-        Consider if the question relates to: programming, unrelated subjects, inappropriate content, or topics not covered in this grade level.
-      `;
-
-      try {
-        const scopeResult = await quickScopeCheck(scopePrompt);
-        outOfScope = scopeResult.out_of_scope;
-        explanation = scopeResult.explanation;
-      } catch (e) {
-        console.log("Scope check failed, assuming in-scope");
-        outOfScope = false;
-      }
+    // Simple keyword-based check instead of AI scope check (AI was too aggressive)
+    const offTopicKeywords = ['bitcoin', 'cryptocurrency', 'crypto', 'forex', 'stock market', 'gambling', 'adult', 'weapon', 'drug', 'violence'];
+    const queryLower = query.toLowerCase();
+    if (offTopicKeywords.some(kw => queryLower.includes(kw))) {
+      outOfScope = true;
+      explanation = `This topic is not part of the Grade ${gradeBand} ${subject} curriculum.`;
     }
 
     // 4. Handle no curriculum content case

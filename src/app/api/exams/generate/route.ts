@@ -5,7 +5,7 @@ import { isAuthError, requireRole } from "@/lib/api-auth";
 
 export async function POST(req: NextRequest) {
   try {
-    const auth = await requireRole(req, ["teacher", "admin"], "teacher");
+    const auth = await requireRole(req, ["student", "teacher", "admin"], "student");
     if (isAuthError(auth)) return auth;
     const { subject, topic, difficulty, grade, question_types, question_count } = await req.json();
 
