@@ -48,8 +48,8 @@ export default function EntrancePage() {
   const activeGrade = user ? getActiveGrade(user) : "12";
   const subjects = getSubjectsForGrade(activeGrade);
   const label = isAO
-    ? activeGrade === "12" ? "Qophii Ministry" : "Qophii Ministry Naannoo"
-    : activeGrade === "12" ? "Ministry Exam Prep" : "Regional Ministry Prep";
+    ? activeGrade === "12" ? "Qormaata Seennaa" : "Qophii Qormaata Ministrii"
+    : activeGrade === "12" ? "Entrance Exam Prep" : "Qophii Qormaata Ministrii";
 
   const [phase, setPhase] = useState<"setup"|"taking"|"results">("setup");
   const [subject, setSubject] = useState("");
@@ -124,7 +124,9 @@ export default function EntrancePage() {
                 </div>
                 <div>
                   <h1 style={{ fontSize: "1.75rem", fontWeight: 800, margin: 0 }}>
-                    {isAO ? "Qophii Ministry" : "Ministry Exam Prep"}
+                    {isAO
+                      ? activeGrade === "12" ? "Qormaata Seennaa" : "Qophii Qormaata Ministrii"
+                      : activeGrade === "12" ? "Entrance Exam Prep" : "Qophii Qormaata Ministrii"}
                   </h1>
                   <p style={{ color: "var(--text-secondary)", fontSize: "0.875rem", margin: 0 }}>
                     {isAO ? `${label} — Kutaa ${activeGrade}` : `${label} — Grade ${activeGrade}`}

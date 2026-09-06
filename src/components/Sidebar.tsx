@@ -49,7 +49,7 @@ export default function Sidebar() {
     { name: isAO ? "Fuula Jalqabaa"   : "Dashboard",    path: "/dashboard", icon: LayoutDashboard, roles: ["student","teacher","admin","director"] },
     { name: isAO ? "Barsiisaa AI"     : "AI Tutor",     path: "/tutor",     icon: MessageSquare,   roles: ["student","teacher","admin"] },
     { name: isAO ? "Qophii Qormaataa" : "Exam Centre",  path: "/exams",     icon: Award,           roles: ["student","teacher","admin"] },
-    { name: isAO ? "Qophii Ministry"   : "Ministry Prep", path: "/entrance",  icon: GraduationCap,   roles: ["student"] },
+    { name: isAO ? (user.grade === "12" ? "Qormaata Seennaa" : "Qophii Qormaata Ministrii") : (user.grade === "12" ? "Entrance Exam Prep" : "Qophii Qormaata Ministrii"), path: "/entrance",  icon: GraduationCap,   roles: ["student"] },
     { name: isAO ? "Bu'aa Qormaataa"  : "My Results",   path: "/results",   icon: History,         roles: ["student"] },
     { name: isAO ? "Kuusaa Barnootaa" : "Curriculum",   path: "/admin",     icon: BookOpen,        roles: ["teacher"] },
     { name: isAO ? "Bulchiinsa"       : "Admin Panel",  path: "/admin",     icon: Shield,          roles: ["admin"] },
