@@ -7,7 +7,7 @@ import AuthGuard from "@/components/AuthGuard";
 import { isAfaanOromo, getSubjectsForGrade, getActiveGrade } from "@/lib/subjects";
 import {
   Award, Play, Clock, CheckCircle, XCircle, Send,
-  BookOpen, RefreshCw, ChevronRight,
+  BookOpen, RefreshCw, ChevronRight, Download,
 } from "lucide-react";
 
 // ── Timer ──────────────────────────────────────────────────────────────────────
@@ -219,7 +219,12 @@ export default function EntrancePage() {
                   <h2 style={{ fontSize: "1.25rem", fontWeight: 700, margin: 0 }}>{exam.subject} — {label}</h2>
                   <p style={{ fontSize: "0.8rem", color: "var(--text-secondary)", margin: 0 }}>{exam.questions.length} {isAO ? "gaaffii" : "questions"}</p>
                 </div>
+                <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
                 <ExamTimer seconds={mins * 60} onExpire={submit} />
+                <button onClick={() => window.print()} className="btn btn-outline no-print" style={{ fontSize: "0.8rem", padding: "0.45rem 0.85rem", display: "flex", alignItems: "center", gap: "0.4rem" }}>
+                  <Download size={13} />{isAO ? "Maxxansi" : "Print"}
+                </button>
+              </div>
               </div>
 
               <div style={{ height: "4px", background: "var(--glass-border)", borderRadius: "2px", marginBottom: "1.5rem", overflow: "hidden" }}>
@@ -258,7 +263,15 @@ export default function EntrancePage() {
                   {submitting ? "..." : <><Send size={15} style={{ marginRight: "0.4rem" }} />{isAO ? "Ergi" : "Submit"}</>}
                 </button>
               </div>
-              <style jsx>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+              <style jsx>{`
+                @keyframes spin { to { transform: rotate(360deg); } }
+                @media print {
+                  .no-print { display: none !important; }
+                  aside, nav { display: none !important; }
+                  .main-content { margin: 0 !important; padding: 1rem !important; }
+                  .glass-panel { border: 1px solid #ccc !important; background: #fff !important; color: #000 !important; box-shadow: none !important; }
+                }
+              `}</style>
             </div>
           )}
 
@@ -326,11 +339,14 @@ export default function EntrancePage() {
               </div>
 
               <div style={{ display: "flex", gap: "1rem", marginTop: "2rem", flexWrap: "wrap" }}>
-                <button onClick={reset} className="btn btn-primary" style={{ background: "linear-gradient(135deg, var(--warning), #d97706)", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                <button onClick={reset} className="btn btn-primary no-print" style={{ background: "linear-gradient(135deg, var(--warning), #d97706)", display: "flex", alignItems: "center", gap: "0.5rem" }}>
                   <RefreshCw size={15} />{isAO ? "Qophii Haaraa" : activeGrade === "12" ? "New Entrance Exam" : "New Ministry Prep"}
                 </button>
-                <button onClick={() => { setPhase("taking"); setAnswers({}); setResults(null); }} className="btn btn-outline">
+                <button onClick={() => { setPhase("taking"); setAnswers({}); setResults(null); }} className="btn btn-outline no-print">
                   {isAO ? "Irra Deebi'i Qorami" : "Retake This Exam"}
+                </button>
+                <button onClick={() => window.print()} className="btn btn-outline no-print" style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                  <Download size={15} />{isAO ? "Maxxansi / Buufadhu" : "Print / Download"}
                 </button>
               </div>
             </div>
