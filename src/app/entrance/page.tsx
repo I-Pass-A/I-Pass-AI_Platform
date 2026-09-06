@@ -141,7 +141,7 @@ export default function EntrancePage() {
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px,1fr))", gap: "1.5rem" }}>
                 <div className="glass-panel" style={{ padding: "2rem" }}>
                   <h3 style={{ fontSize: "1rem", fontWeight: 700, marginBottom: "1.5rem" }}>
-                    {isAO ? "Qophii Ministry Qindeessi" : "Configure Ministry Prep"}
+                    {isAO ? "Qophii Ministry Qindeessi" : activeGrade === "12" ? "Configure Entrance Exam" : "Configure Ministry Prep"}
                   </h3>
 
                   <div className="form-group">
@@ -176,7 +176,7 @@ export default function EntrancePage() {
                     style={{ width: "100%", background: "linear-gradient(135deg, var(--warning) 0%, #d97706 100%)", boxShadow: "0 4px 14px rgba(245,158,11,0.3)" }}>
                     {generating
                       ? <><span style={{ display: "inline-block", width: "14px", height: "14px", border: "2px solid rgba(255,255,255,0.3)", borderTopColor: "#fff", borderRadius: "50%", animation: "spin 0.8s linear infinite", marginRight: "0.5rem" }} />{isAO ? "Uumamaa jira..." : "Generating..."}</>
-                      : <><Play size={15} style={{ marginRight: "0.4rem" }} />{isAO ? "Qophii Eegali" : "Start Ministry Prep"}</>}
+                      : <><Play size={15} style={{ marginRight: "0.4rem" }} />{isAO ? "Qophii Eegali" : activeGrade === "12" ? "Start Entrance Exam" : "Start Ministry Prep"}</>}
                   </button>
                 </div>
 
@@ -327,7 +327,7 @@ export default function EntrancePage() {
 
               <div style={{ display: "flex", gap: "1rem", marginTop: "2rem", flexWrap: "wrap" }}>
                 <button onClick={reset} className="btn btn-primary" style={{ background: "linear-gradient(135deg, var(--warning), #d97706)", display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                  <RefreshCw size={15} />{isAO ? "Qophii Haaraa" : "New Ministry Prep"}
+                  <RefreshCw size={15} />{isAO ? "Qophii Haaraa" : activeGrade === "12" ? "New Entrance Exam" : "New Ministry Prep"}
                 </button>
                 <button onClick={() => { setPhase("taking"); setAnswers({}); setResults(null); }} className="btn btn-outline">
                   {isAO ? "Irra Deebi'i Qorami" : "Retake This Exam"}
