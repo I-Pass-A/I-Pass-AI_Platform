@@ -38,7 +38,10 @@ export default function ProfilePage() {
     }
   }, [user]);
 
-  if (!user) return null;
+  if (!user) {
+    if (typeof window !== "undefined") window.location.href = "/";
+    return null;
+  }
 
   const isAO = isAfaanOromo(user);
   const meta = (user as any);

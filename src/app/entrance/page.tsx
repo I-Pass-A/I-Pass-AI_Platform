@@ -104,7 +104,10 @@ export default function EntrancePage() {
   const sc = (s: number) => s >= 70 ? "var(--success)" : s >= 50 ? "var(--warning)" : "var(--danger)";
   const allDone = exam?.questions.every((q: any) => answers[q.id]?.trim());
 
-  if (!user) return null;
+  if (!user) {
+    if (typeof window !== "undefined") window.location.href = "/";
+    return null;
+  }
 
   return (
     <AuthGuard>

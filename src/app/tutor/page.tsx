@@ -95,7 +95,10 @@ function TutorPageContent() {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  if (!user) return null;
+  if (!user) {
+    if (typeof window !== "undefined") window.location.href = "/";
+    return null;
+  }
 
   // Determine subject list: teachers use their grade_taught, students use their grade
   const activeGrade = user.role === "teacher" ? (user.grade_taught ?? user.grade) : user.grade;

@@ -167,7 +167,7 @@ export default function Sidebar() {
         </div>
 
         <button
-          onClick={logout}
+          onClick={async () => { await logout(); router.push("/"); }}
           style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem", padding: "0.625rem 1rem", background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.25)", borderRadius: "8px", color: "var(--danger)", fontSize: "0.875rem", fontWeight: 500, cursor: "pointer", transition: "all 0.15s ease" }}
           onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(239,68,68,0.15)"; (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(239,68,68,0.45)"; }}
           onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(239,68,68,0.08)"; (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(239,68,68,0.25)"; }}
