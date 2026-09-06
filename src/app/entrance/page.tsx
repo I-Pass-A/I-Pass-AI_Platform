@@ -47,9 +47,7 @@ export default function EntrancePage() {
   const isAO = isAfaanOromo(user);
   const activeGrade = user ? getActiveGrade(user) : "12";
   const subjects = getSubjectsForGrade(activeGrade);
-  const label = isAO
-    ? activeGrade === "12" ? "Qormaata Seennaa" : "Qophii Qormaata Ministrii"
-    : activeGrade === "12" ? "Entrance Exam Prep" : "Qophii Qormaata Ministrii";
+  const label = activeGrade === "12" ? "Entrance Exam Prep" : "Qophii Qormaata Ministrii";
 
   const [phase, setPhase] = useState<"setup"|"taking"|"results">("setup");
   const [subject, setSubject] = useState("");
