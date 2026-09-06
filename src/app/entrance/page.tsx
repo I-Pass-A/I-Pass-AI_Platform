@@ -47,7 +47,9 @@ export default function EntrancePage() {
   const isAO = isAfaanOromo(user);
   const activeGrade = user ? getActiveGrade(user) : "12";
   const subjects = getSubjectsForGrade(activeGrade);
-  const label = activeGrade === "12" ? "UEE" : isAO ? "Qormaata Seennaa Naannoo" : "Regional Entrance";
+  const label = isAO
+    ? activeGrade === "12" ? "Qophii Ministry" : "Qophii Ministry Naannoo"
+    : activeGrade === "12" ? "Ministry Exam Prep" : "Regional Ministry Prep";
 
   const [phase, setPhase] = useState<"setup"|"taking"|"results">("setup");
   const [subject, setSubject] = useState("");
@@ -119,24 +121,24 @@ export default function EntrancePage() {
                 </div>
                 <div>
                   <h1 style={{ fontSize: "1.75rem", fontWeight: 800, margin: 0 }}>
-                    {isAO ? "Qormaata Seennaa" : "Entrance Exam Prep"}
+                    {isAO ? "Qophii Ministry" : "Ministry Exam Prep"}
                   </h1>
                   <p style={{ color: "var(--text-secondary)", fontSize: "0.875rem", margin: 0 }}>
-                    {isAO ? `${label} — Kutaa ${activeGrade}` : `${label} practice — Grade ${activeGrade}`}
+                    {isAO ? `${label} — Kutaa ${activeGrade}` : `${label} — Grade ${activeGrade}`}
                   </p>
                 </div>
               </div>
 
               <div style={{ padding: "0.875rem 1.25rem", borderRadius: "10px", background: "rgba(245,158,11,0.06)", border: "1px solid rgba(245,158,11,0.2)", marginBottom: "2rem", fontSize: "0.85rem", color: "var(--text-secondary)", lineHeight: 1.6 }}>
                 💡 {isAO
-                  ? `AI-n qormaata seennaa dhugaa (${label}) irraa barachuu fi akka sanaa gaaffilee haaraa uuma. Garagalcha miti — akkaataa fi cimina qormaata dhugaa fakkaatu.`
+                  ? `AI-n qormaata Ministry dhugaa (${label}) irraa barachuu fi akka sanaa gaaffilee haaraa uuma. Garagalcha miti — akkaataa fi cimina qormaata dhugaa fakkaatu.`
                   : `AI studies real ${label} past papers and generates new questions matching the exact style, difficulty, and pattern — not copies.`}
               </div>
 
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px,1fr))", gap: "1.5rem" }}>
                 <div className="glass-panel" style={{ padding: "2rem" }}>
                   <h3 style={{ fontSize: "1rem", fontWeight: 700, marginBottom: "1.5rem" }}>
-                    {isAO ? "Qormaata Qopheessi" : "Configure Practice"}
+                    {isAO ? "Qophii Ministry Qindeessi" : "Configure Ministry Prep"}
                   </h3>
 
                   <div className="form-group">
@@ -171,7 +173,7 @@ export default function EntrancePage() {
                     style={{ width: "100%", background: "linear-gradient(135deg, var(--warning) 0%, #d97706 100%)", boxShadow: "0 4px 14px rgba(245,158,11,0.3)" }}>
                     {generating
                       ? <><span style={{ display: "inline-block", width: "14px", height: "14px", border: "2px solid rgba(255,255,255,0.3)", borderTopColor: "#fff", borderRadius: "50%", animation: "spin 0.8s linear infinite", marginRight: "0.5rem" }} />{isAO ? "Uumamaa jira..." : "Generating..."}</>
-                      : <><Play size={15} style={{ marginRight: "0.4rem" }} />{isAO ? "Qormaata Eegali" : "Start Practice Exam"}</>}
+                      : <><Play size={15} style={{ marginRight: "0.4rem" }} />{isAO ? "Qophii Eegali" : "Start Ministry Prep"}</>}
                   </button>
                 </div>
 
@@ -179,14 +181,21 @@ export default function EntrancePage() {
                   <h3 style={{ fontSize: "1rem", fontWeight: 700, marginBottom: "1.25rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
                     <BookOpen size={16} style={{ color: "var(--warning)" }} />{isAO ? "Madda Qormaataa" : "Exam Sources"}
                   </h3>
-                  {[
-                    { year: "2015", type: isAO ? "Qormaata UEE Dhugaa" : "Real UEE Exam Papers", note: isAO ? "MOE" : "MOE" },
-                    { year: "2017", type: isAO ? "Qormaata Modela Jalqaba" : "First Round Model Exams", note: isAO ? "Model" : "Model" },
-                  ].map((s, i) => (
+                  {(activeGrade === "12" ? [
+                    { year: "2014–2016 E.C.", type: isAO ? "Qormaata Ministry Biyyoolessaa" : "National Ministry Exam Papers",   note: "MoE Ethiopia" },
+                    { year: "2017 E.C.",      type: isAO ? "Qormaata Modela Jalqabaa"       : "First Round Model Exams",          note: "MoE Model" },
+                    { year: "2018 E.C.",      type: isAO ? "Qormaata Modela Lammaffaa"      : "Second Round Model Exams",         note: "MoE Model" },
+                    { year: "Blue Print",     type: isAO ? "Karoora Qormaataa MOE"          : "MOE Official Exam Blueprint",      note: "MoE" },
+                  ] : [
+                    { year: "2014–2016 E.C.", type: isAO ? "Qormaata Ministry Naannoo Oromiyaa" : "Oromia Regional Ministry Exams", note: "OEB" },
+                    { year: "2017 E.C.",      type: isAO ? "Qormaata Modela Naannoo"            : "Regional Model Exams",           note: "OEB Model" },
+                    { year: "2018 E.C.",      type: isAO ? "Qormaata Modela Haaraa"             : "Latest Regional Model Exams",    note: "OEB Model" },
+                    { year: "Blue Print",     type: isAO ? "Karoora Qormaataa Naannoo"          : "Oromia Bureau Exam Blueprint",   note: "OEB" },
+                  ]).map((src, i) => (
                     <div key={i} style={{ padding: "0.875rem 1rem", borderRadius: "8px", background: "var(--glass-bg)", border: "1px solid var(--glass-border)", display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem" }}>
                       <div>
-                        <p style={{ fontWeight: 600, fontSize: "0.9rem", margin: 0 }}>{s.year} — {s.note}</p>
-                        <p style={{ fontSize: "0.75rem", color: "var(--text-muted)", margin: 0 }}>{s.type}</p>
+                        <p style={{ fontWeight: 600, fontSize: "0.9rem", margin: 0 }}>{src.year} — {src.note}</p>
+                        <p style={{ fontSize: "0.75rem", color: "var(--text-muted)", margin: 0 }}>{src.type}</p>
                       </div>
                       <CheckCircle size={16} style={{ color: "var(--success)" }} />
                     </div>
@@ -258,7 +267,7 @@ export default function EntrancePage() {
                   <span style={{ fontSize: "1.1rem", fontWeight: 800, color: sc(results.score) }}>{results.score.toFixed(1)}%</span>
                 </div>
                 <div style={{ flex: 1 }}>
-                  <h2 style={{ fontWeight: 800, fontSize: "1.3rem", margin: "0 0 0.25rem" }}>{isAO ? "Qormaanni Xumurameera!" : "Exam Complete!"}</h2>
+                  <h2 style={{ fontWeight: 800, fontSize: "1.3rem", margin: "0 0 0.25rem" }}>{isAO ? "Qophiin Xumurameera!" : "Exam Complete!"}</h2>
                   <p style={{ color: "var(--text-secondary)", margin: 0, fontSize: "0.875rem" }}>{exam.subject} · {label}</p>
                 </div>
                 <div style={{ display: "flex", gap: "1.5rem" }}>
@@ -315,10 +324,10 @@ export default function EntrancePage() {
 
               <div style={{ display: "flex", gap: "1rem", marginTop: "2rem", flexWrap: "wrap" }}>
                 <button onClick={reset} className="btn btn-primary" style={{ background: "linear-gradient(135deg, var(--warning), #d97706)", display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                  <RefreshCw size={15} />{isAO ? "Qormaata Haaraa" : "New Practice Exam"}
+                  <RefreshCw size={15} />{isAO ? "Qophii Haaraa" : "New Ministry Prep"}
                 </button>
                 <button onClick={() => { setPhase("taking"); setAnswers({}); setResults(null); }} className="btn btn-outline">
-                  {isAO ? "Irra Deebi'i" : "Retake This Exam"}
+                  {isAO ? "Irra Deebi'i Qorami" : "Retake This Exam"}
                 </button>
               </div>
             </div>
